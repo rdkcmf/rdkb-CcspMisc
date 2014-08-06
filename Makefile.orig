@@ -1,0 +1,191 @@
+#######################################################################
+#   Copyright [2014] [Cisco Systems, Inc.]
+# 
+#   Licensed under the Apache License, Version 2.0 (the \"License\");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+# 
+#       http://www.apache.org/licenses/LICENSE-2.0
+# 
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an \"AS IS\" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#######################################################################
+
+#
+include $(CCSP_ROOT_DIR)/arch/ccsp_common.mk
+
+ifeq ($(CCSP_MISC_BUILD_CoreDump), 1)
+	COREDUMP_DIR = $(ComponentSrcDir)/CoreDump
+endif
+
+#
+#	multiple targets are chained together
+#
+CcspMiscTargets :=
+
+ifeq ($(CCSP_MISC_BUILD_dmcli), 1)
+
+	# Make sure to replace TAB with spaces!!! Otherwise, the section below is considered part of the recipe above!
+    target1 := $(ComponentBuildDir)/dmcli
+    CcspMiscTargets += $(target1)
+
+    source_files1 := $(call add_files_from_src,Ccsp_bus_client_tool,'*.c')
+    obj_files1 := $(addprefix $(ComponentBuildDir)/, $(source_files1:%.c=%.o))
+    -include $(obj_files1:.o=.d)
+
+$(target1): $(obj_files1)
+
+endif
+
+
+ifeq ($(CCSP_MISC_BUILD_TR_DBG_UI), 1)
+
+# Make sure to replace TAB with spaces!!! Otherwise, the section below is considered part of the recipe above!
+target2 := $(ComponentBuildDir)/acsconfig
+CcspMiscTargets += $(target2)
+
+source_files2 := $(call add_files_from_src,Acsconfig,'*.c')
+obj_files2 := $(addprefix $(ComponentBuildDir)/, $(source_files2:%.c=%.o))
+-include $(obj_files2:.o=.d)
+
+$(target2): $(obj_files2)
+
+# Make sure to replace TAB with spaces!!! Otherwise, the section below is considered part of the recipe above!
+target4 := $(ComponentBuildDir)/cpehelp
+CcspMiscTargets += $(target4)
+
+source_files4 := $(call add_files_from_src,Cpehelp,'*.c')
+obj_files4 := $(addprefix $(ComponentBuildDir)/, $(source_files4:%.c=%.o))
+-include $(obj_files4:.o=.d)
+
+$(target4): $(obj_files4)
+
+# Make sure to replace TAB with spaces!!! Otherwise, the section below is considered part of the recipe above!
+target5 := $(ComponentBuildDir)/objects
+CcspMiscTargets += $(target5)
+
+source_files5 := $(call add_files_from,Objects,'*.c')
+obj_files5 := $(addprefix $(ComponentBuildDir)/, $(source_files5:%.c=%.o))
+-include $(obj_files5:.o=.d)
+
+$(target5): $(obj_files5)
+
+# Make sure to replace TAB with spaces!!! Otherwise, the section below is considered part of the recipe above!
+target6 := $(ComponentBuildDir)/setvalues
+CcspMiscTargets += $(target6)
+	
+source_files6 := $(call add_files_from_src,Setvalues,'*.c')
+obj_files6 := $(addprefix $(ComponentBuildDir)/, $(source_files6:%.c=%.o))
+-include $(obj_files6:.o=.d)
+
+$(target6): $(obj_files6)
+
+# Make sure to replace TAB with spaces!!! Otherwise, the section below is considered part of the recipe above!
+target7 := $(ComponentBuildDir)/params
+CcspMiscTargets += $(target7)
+
+source_files7 := $(call add_files_from_src,Params,'*.c')
+obj_files7 := $(addprefix $(ComponentBuildDir)/, $(source_files7:%.c=%.o))
+-include $(obj_files7:.o=.d)
+
+$(target7): $(obj_files7)
+
+# Make sure to replace TAB with spaces!!! Otherwise, the section below is considered part of the recipe above!
+target8 := $(ComponentBuildDir)/param_value
+CcspMiscTargets += $(target8)
+
+source_files8 := $(call add_files_from_src,Param_value,'*.c')
+obj_files8 := $(addprefix $(ComponentBuildDir)/, $(source_files8:%.c=%.o))
+-include $(obj_files8:.o=.d)
+
+$(target8): $(obj_files8)
+
+endif
+
+
+ifeq ($(CCSP_MISC_BUILD_RecoveryManager), 1)
+
+# Make sure to replace TAB with spaces!!! Otherwise, the section below is considered part of the recipe above!
+target9 := $(ComponentBuildDir)/ccspRecoveryManager
+CcspMiscTargets += $(target9)
+
+source_files9 := $(call add_files_from_src,CcspRecoveryManager,'*.c')
+obj_files9 := $(addprefix $(ComponentBuildDir)/, $(source_files9:%.c=%.o))
+-include $(obj_files1:.o=.d)
+
+$(target9): $(obj_files9)
+
+endif
+
+ifeq ($(CCSP_MISC_BUILD_psmcli), 1)
+
+# Make sure to replace TAB with spaces!!! Otherwise, the section below is considered part of the recipe above!
+target10 := $(ComponentBuildDir)/psmcli
+CcspMiscTargets += $(target10)
+
+source_files10 := $(call add_files_from_src,Psmcli,'*.c')
+obj_files10 := $(addprefix $(ComponentBuildDir)/, $(source_files10:%.c=%.o))
+-include $(obj_files10:.o=.d)
+
+$(target10): $(obj_files10)
+
+endif
+
+ifeq ($(CCSP_MISC_BUILD_cdm), 1)
+
+# Make sure to replace TAB with spaces!!! Otherwise, the section below is considered part of the recipe above!
+target11 := $(ComponentBuildDir)/cdm
+CcspMiscTargets += $(target11)
+
+source_files11 := $(call add_files_from_src,ccsp_dm_api,'*.c')
+obj_files11 := $(addprefix $(ComponentBuildDir)/, $(source_files11:%.c=%.o))
+-include $(obj_files11:.o=.d)
+
+$(target11): $(obj_files11)
+
+endif
+
+#
+#	Set up include directories
+#
+INCPATH += $(CCSP_COMMON_DIR)/source/util_api/ansc/AnscXmlDomParser
+CFLAGS += $(addprefix -I, $(INCPATH))
+
+#
+#	Build targets
+#
+all: $(CcspMiscTargets)
+
+ifeq ($(CCSP_MISC_BUILD_CoreDump), 1)
+	make -C $(COREDUMP_DIR)
+endif
+
+install:
+	@echo "Installing CCSP-MISC Installables"
+	@install -d -m 0755 $(CCSP_OUT_DIR)
+	@cp -f $(CcspMiscTargets) $(CCSP_OUT_DIR)
+	@ln -sf dmcli $(CCSP_OUT_DIR)/ccsp_bus_client_tool
+
+ifeq ($(CCSP_MISC_BUILD_CoreDump), 1)
+	make -C $(COREDUMP_DIR) install
+endif
+
+.PHONY: all clean
+
+clean:
+	rm -Rf $(ComponentBuildDir)
+ifeq ($(CCSP_MISC_BUILD_CoreDump), 1)
+	make -C $(COREDUMP_DIR) clean
+endif
+    
+LDFLAGS   += -lccsp_common
+
+#
+# include custom post makefile, if exists
+#
+ifneq ($(findstring $(CCSP_CMPNT_BUILD_CUSTOM_MK_POST), $(wildcard $(ComponentBoardDir)/*.mk)), )
+    include $(ComponentBoardDir)/$(CCSP_CMPNT_BUILD_CUSTOM_MK_POST)
+endif

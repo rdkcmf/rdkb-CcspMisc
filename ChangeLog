@@ -1,0 +1,10 @@
+- move arch/intel_usg/boards/rdkb_arm/cmpnt_build_custom_pre.mk to
+       cmpnt_build_custom_pre_arm.mk
+- move arch/intel_usg/boards/rdkb_atom/cmpnt_build_custom_pre.mk to
+       cmpnt_build_custom_pre_atom.mk
+- move arch/pc/boards/rdkb/cmpnt_build_custom_pre.mk to
+       cmpnt_build_custom_pre_pc.mk
+- remove arch directory
+- move Makefile Makefile.orig
+- remove empty LICENSE file
+- remove empty Version.txt file
