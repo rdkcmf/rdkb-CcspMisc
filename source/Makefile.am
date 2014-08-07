@@ -1,1 +1,1 @@
-SUBDIRS = Psmcli Ccsp_bus_client_tool
+SUBDIRS = Ccsp_bus_client_tool Psmcli

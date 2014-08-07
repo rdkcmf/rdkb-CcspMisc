@@ -30,8 +30,8 @@ AC_C_INLINE
 AC_FUNC_MALLOC
 
 AC_CONFIG_FILES(
-	source/Psmcli/Makefile
 	source/Ccsp_bus_client_tool/Makefile
+	source/Psmcli/Makefile
 	source/Makefile
 	Makefile
 )
