@@ -6,8 +6,8 @@ AM_LDFLAGS = -L$(top_srcdir)/../CcspCommonLibrary/lib
 AM_LDFLAGS += -lccsp_common
 AM_LDFLAGS += -lpthread
 AM_LDFLAGS += -lrt
-AM_LDFLAGS += -lssl
-AM_LDFLAGS += -lcrypto
+AM_LDFLAGS +=
+AM_LDFLAGS +=
 AM_LDFLAGS += -lz
 
 AM_CPPFLAGS = -Wall -Werror
@@ -16,4 +16,4 @@ hardware_platform = i686-linux-gnu
 bin_PROGRAMS = dmcli
 dmcli_CPPFLAGS = -I$(top_srcdir)/../CcspCommonLibrary/source/ccsp/custom -I$(top_srcdir)/../CcspCommonLibrary/source/ccsp/include -I$(top_srcdir)/../CcspCommonLibrary/source/debug_api/include -I$(top_srcdir)/../CcspCommonLibrary/source/cosa/include -I$(top_srcdir)/../CcspCommonLibrary/source/cosa/include/linux -I$(top_srcdir)/../CcspCommonLibrary/source/ccsp/components/include -I$(top_srcdir)/../CcspCommonLibrary/source/cosa/package/slap/include $(CPPFLAGS)
 dmcli_SOURCES = ccsp_message_bus_client_tool.c
-dmcli_LDFLAGS = -lccsp_common -lpthread -lrt -lssl -lcrypto -lz
+dmcli_LDFLAGS = -lccsp_common -lpthread -lrt -lz
