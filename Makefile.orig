@@ -26,19 +26,6 @@ endif
 #
 CcspMiscTargets :=
 
-ifeq ($(CCSP_MISC_BUILD_dmcli), 1)
-
-	# Make sure to replace TAB with spaces!!! Otherwise, the section below is considered part of the recipe above!
-    target1 := $(ComponentBuildDir)/dmcli
-    CcspMiscTargets += $(target1)
-
-    source_files1 := $(call add_files_from_src,Ccsp_bus_client_tool,'*.c')
-    obj_files1 := $(addprefix $(ComponentBuildDir)/, $(source_files1:%.c=%.o))
-    -include $(obj_files1:.o=.d)
-
-$(target1): $(obj_files1)
-
-endif
 
 
 ifeq ($(CCSP_MISC_BUILD_TR_DBG_UI), 1)
@@ -167,7 +154,6 @@ install:
 	@echo "Installing CCSP-MISC Installables"
 	@install -d -m 0755 $(CCSP_OUT_DIR)
 	@cp -f $(CcspMiscTargets) $(CCSP_OUT_DIR)
-	@ln -sf dmcli $(CCSP_OUT_DIR)/ccsp_bus_client_tool
 
 ifeq ($(CCSP_MISC_BUILD_CoreDump), 1)
 	make -C $(COREDUMP_DIR) install

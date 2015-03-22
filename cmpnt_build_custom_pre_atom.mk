@@ -22,7 +22,6 @@
 #
 #   component list
 #
-CCSP_MISC_BUILD_dmcli           := 1
 CCSP_MISC_BUILD_psmcli          := 1
 
 CCSP_MISC_BUILD_RecoveryManager := 0
