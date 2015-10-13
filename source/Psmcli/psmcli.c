@@ -45,7 +45,6 @@
 #include "ccsp_psm_helper.h"    // for PSM_Get/Set_Record_Value2 
 #include "ccsp_psmcli.h"        // for extern psmcli_debug_level psmcli_debug_print
 
-#include <ucontext.h>           // for ccsp_exception_handler
 #include <signal.h>             // for sigaction
 
 #include "ccsp_trace.h"         // for CcspTraceXYZ
@@ -394,7 +393,6 @@ static int is_core_dump_opened(void)
 static void ccsp_exception_handler(int sig, siginfo_t *info, void *context)
 {
     int fd1;
-    ucontext_t *ctx = (ucontext_t *)context;
     pid_t pid = getpid();
     char mapsFile[32]     = {0};
     char cmdFile[32]      = {0};
