@@ -392,7 +392,7 @@ static int is_core_dump_opened(void)
 
 static void ccsp_exception_handler(int sig, siginfo_t *info, void *context)
 {
-    int fd1;
+    int fd1 = -1;
     pid_t pid = getpid();
     char mapsFile[32]     = {0};
     char cmdFile[32]      = {0};
@@ -409,10 +409,11 @@ static void ccsp_exception_handler(int sig, siginfo_t *info, void *context)
     
     /* Get command name */
     fd1 = open( cmdFile, O_RDONLY );
-    if( fd1 > 0 )
+    if( fd1 != -1 ) /*RDKB-7441, CID-33230, validating the file handle*/
     {
         read(fd1, cmdName, sizeof(cmdName)-1 );
         close(fd1);
+        fd1 = -1;
     }
 
     /* dump general information */
@@ -443,7 +444,7 @@ static void ccsp_exception_handler(int sig, siginfo_t *info, void *context)
     
     /* Output maps information in order to locate crash pointer */
     fd1 = open( mapsFile, O_RDONLY );
-    if( fd1 > 0 )
+    if( fd1 != -1 ) /*RDKB-7441, CID-33230, validating the file handle*/
     {
         unsigned char    buf[ 512 ] = {0};
         unsigned int     readBytes = 0;
