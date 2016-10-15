@@ -41,6 +41,8 @@
 #   component list
 #
 CCSP_MISC_BUILD_psmcli          := 1
+CCSP_MISC_BUILD_LTime           := 1
+CCSP_MISC_BUILD_TimeConv        := 1
 
 CCSP_MISC_BUILD_RecoveryManager := 0
 CCSP_MISC_BUILD_cdm             := 0
@@ -48,3 +50,4 @@ CCSP_MISC_BUILD_cdm             := 0
 CCSP_MISC_BUILD_CoreDump        := 0
 
 CCSP_MISC_BUILD_TR_DBG_UI       := 0
+
