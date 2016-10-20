@@ -135,6 +135,34 @@ $(target11): $(obj_files11)
 
 endif
 
+ifeq ($(CCSP_MISC_BUILD_LTime), 1)
+
+# Make sure to replace TAB with spaces!!! Otherwise, the section below is considered part of the recipe above!
+target12 := $(ComponentBuildDir)/LTime
+CcspMiscTargets += $(target12)
+
+source_files12 := $(call add_files_from_src,LTime,'*.c')
+obj_files12 := $(addprefix $(ComponentBuildDir)/, $(source_files12:%.c=%.o))
+-include $(obj_files12:.o=.d)
+
+$(target12): $(obj_files12)
+
+endif
+
+ifeq ($(CCSP_MISC_BUILD_TimeConv), 1)
+
+# Make sure to replace TAB with spaces!!! Otherwise, the section below is considered part of the recipe above!
+target13 := $(ComponentBuildDir)/libtime_Conversion.so
+CcspMiscTargets += $(target13)
+
+source_files13 := $(call add_files_from_src,TimeConv,'*.c')
+obj_files13 := $(addprefix $(ComponentBuildDir)/, $(source_files13:%.c=%.o))
+-include $(obj_files13:.o=.d)
+
+$(target13): $(obj_files13)
+
+endif
+
 #
 #	Set up include directories
 #
