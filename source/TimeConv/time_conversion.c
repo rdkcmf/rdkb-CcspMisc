@@ -66,13 +66,20 @@ int ConvLocalToUTC(char* LocalTime, char* UtcTime)
     len = validateTime(LocalTime);
     getLocalTimeStr(LTime);
     strncpy(TmpTime,LTime,11);
+    if(len == 4)
+    {
+        strncat(TmpTime,"0",1);
+        len++;
+    }
     strncat(TmpTime, LocalTime, 11);
+
     if(len == 5)
         {
             strncat(TmpTime, ":00Z", 4);
         }
     else
     strncat(TmpTime, "Z", 1);
+
     strptime(TmpTime, DATE_FMT, &cal);
    // Tell mktime to figure out the daylight saving time
    cal.tm_isdst = -1;
@@ -116,14 +123,23 @@ int ConvUTCToLocal( char* UtcTime, char* LocalTime)
     len = validateTime(UtcTime);
     //getLocalTimeStr(LTime);
     getUTCTimeStr(LTime);
+
     strncpy(TmpTime,LTime,11);
+
     strncat(TmpTime, UtcTime, 11);
+    if(len == 4)
+    {
+        strncat(TmpTime,"0",1);
+        len++;
+    }
+
     if(len == 5)
 	{
 	    strncat(TmpTime, ":00Z", 4);
 	}
     else
     strncat(TmpTime, "Z", 1);
+
 
    // Read string into struct tm
    strptime(TmpTime, DATE_FMT, &cal);
