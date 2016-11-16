@@ -72,4 +72,5 @@
 
 int ConvLocalToUTC(char* LocalTime, char* UtcTime);
 int ConvUTCToLocal( char* UtcTime, char* LocalTime);
+int split_BlockDays(int sRet, int eRet, char *sBDays, char *eBDays);
 #endif
