@@ -16,11 +16,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-if PARODUS_ENABLE
+bin_PROGRAMS = parodusStart
+
+AM_CFLAGS = -I$(top_srcdir)/source 
+hardware_platform = i686-linux-gnu
+AM_LDFLAGS =  -lpthread -lz -lccsp_common
 if CCSP_ARCH_ARM
-PARODUS_OPT = parodusStart
-endif
+AM_LDFLAGS += -lhal_plaform -lsysevent -lutapi -lutctx -lulog 
 endif
 
-SUBDIRS = Psmcli LTime print_uptime $(PARODUS_OPT)
+if CCSP_ARCH_MIPS
+AM_LDFLAGS += -llmapi
+endif
+parodusStart_SOURCES = start_parodus.c
+
+if CCSP_ARCH_ARM
+parodusStart_CPPFLAGS = -D_ANSC_LINUX -D_ANSC_USER 
+parodusStart_LDFLAGS =  -lhal_platform
+endif
+
+if CCSP_ARCH_ARM
+EXTRA_DEPENDENCIES= -llmapi
+parodusStart_LDFLAGS += -lhal_platform
+endif
+
+parodusStart_LDADD=$(EXTRA_DEPENDENCIES)
+
 

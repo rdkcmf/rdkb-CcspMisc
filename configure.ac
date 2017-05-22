@@ -61,6 +61,15 @@ AM_CONDITIONAL(CCSP_ARCH_ATOM, test "x$CCSP_ARCH" = xatom)
 AM_CONDITIONAL(CCSP_ARCH_PC, test "x$CCSP_ARCH" = xpc)
 AM_CONDITIONAL(CCSP_ARCH_MIPS, test "x$CCSP_ARCH" = xmips)
 
+AC_ARG_ENABLE([parodus],
+[  --enable-parodus    Turn on parodus],
+[case "${enableval}" in
+  yes) PARODUS_ENABLE=true ;;
+  no)  PARODUS_ENABLE=false ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-parodus]) ;;
+esac],[PARODUS_ENABLE=false])
+AM_CONDITIONAL([PARODUS_ENABLE], [test x$PARODUS_ENABLE = xtrue])
+
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -87,6 +96,9 @@ AC_CONFIG_FILES(
 	source/Makefile
 	Makefile
 )
+
+AM_COND_IF([PARODUS_ENABLE], [AM_COND_IF([CCSP_ARCH_ARM],
+           [AC_CONFIG_FILES([source/parodusStart/Makefile])])], [])
 
 
 AC_OUTPUT
