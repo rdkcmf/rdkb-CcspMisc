@@ -16,11 +16,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-if PARODUS_ENABLE
-if CCSP_ARCH_ARM
-PARODUS_OPT = parodusStart
-endif
-endif
+bin_PROGRAMS = notify_lease
 
-SUBDIRS = Psmcli LTime print_uptime Notify_Lease $(PARODUS_OPT)
+AM_CFLAGS = -fno-exceptions
+AM_CFLAGS = -Os 
+AM_CFLAGS = -Wall -Wextra
 
+AM_LDFLAGS =  -lpthread -lz 
+notify_lease_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/source/include -I$(top_srcdir)/source/util/utils 
+notify_lease_SOURCES = Notify_Lease.c

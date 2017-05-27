@@ -93,6 +93,7 @@ AC_CONFIG_FILES(
 	source/Psmcli/Makefile
 	source/LTime/Makefile
     source/print_uptime/Makefile
+    source/Notify_Lease/Makefile
 	source/Makefile
 	Makefile
 )
