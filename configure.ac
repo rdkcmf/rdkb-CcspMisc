@@ -70,6 +70,15 @@ AC_ARG_ENABLE([parodus],
 esac],[PARODUS_ENABLE=false])
 AM_CONDITIONAL([PARODUS_ENABLE], [test x$PARODUS_ENABLE = xtrue])
 
+AC_ARG_ENABLE([notifylease],
+[  --enable-notifylease    Turn on leasenotify ],
+[case "${enableval}" in
+  yes) NOTIFYLEASE_ENABLE=true ;;
+  no)  NOTIFYLEASE_ENABLE=false ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-notifylease]) ;;
+esac],[NOTIFYLEASE_ENABLE=false])
+AM_CONDITIONAL([NOTIFYLEASE_ENABLE], [test x$NOTIFYLEASE_ENABLE = xtrue])
+
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -93,7 +102,6 @@ AC_CONFIG_FILES(
 	source/Psmcli/Makefile
 	source/LTime/Makefile
     source/print_uptime/Makefile
-    source/Notify_Lease/Makefile
 	source/Makefile
 	Makefile
 )
@@ -101,6 +109,8 @@ AC_CONFIG_FILES(
 AM_COND_IF([PARODUS_ENABLE], [AM_COND_IF([CCSP_ARCH_ARM],
            [AC_CONFIG_FILES([source/parodusStart/Makefile])])], [])
 
+AM_COND_IF([NOTIFYLEASE_ENABLE], [AM_COND_IF([CCSP_ARCH_ARM],
+           [AC_CONFIG_FILES([source/Notify_Lease/Makefile])])], [])
 
 AC_OUTPUT
 
