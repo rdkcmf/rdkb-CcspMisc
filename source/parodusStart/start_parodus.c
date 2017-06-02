@@ -58,7 +58,7 @@
 /*----------------------------------------------------------------------------*/
 /*                             Function Prototypes                            */
 /*----------------------------------------------------------------------------*/
-static void get_parodus_url(char *parodus_url, char *client_url);
+static void get_url(char *parodus_url, char *client_url, char *seshat_url);
 static int addParodusCmdToFile(char *command);
 static void _START_LOG(const char *msg, ...);
 
@@ -77,6 +77,7 @@ int main()
 	CMMGMT_CM_DHCP_INFO dhcpinfo;
 	char parodus_url[64] = {'\0'};
         char client_url[64] = {'\0'};
+        char seshat_url[64] = {'\0'};
         char command[1024]={'\0'};
         unsigned long bootTime=0;
         struct sysinfo s_info;
@@ -181,14 +182,15 @@ int main()
 	}
 
          LogInfo("Fetch parodus url from device.properties file\n");
-	 get_parodus_url(parodus_url, client_url);
+	 get_url(parodus_url, client_url, seshat_url);
 	 LogInfo("parodus_url returned is %s\n", parodus_url);
+         LogInfo("seshat_url returned is %s\n", seshat_url);
 	 
 	 
 	 LogInfo("Framing command for parodus\n");
 		
 	snprintf(command, sizeof(command),
-	"/usr/bin/parodus --hw-model=%s --hw-serial-number=%s --hw-manufacturer=%s --hw-last-reboot-reason=%s --fw-name=%s --boot-time=%lu --hw-mac=%s --webpa-ping-time=180 --webpa-inteface-used=erouter0 --webpa-url=fabric.webpa.comcast.net --webpa-backoff-max=9 --parodus-local-url=%s --partner-id=comcast", modelName, serialNumber, manufacturer, lastRebootReason, firmwareVersion, bootTime, deviceMac, ((NULL != parodus_url) ? parodus_url : PARODUS_UPSTREAM));
+	"/usr/bin/parodus --hw-model=%s --hw-serial-number=%s --hw-manufacturer=%s --hw-last-reboot-reason=%s --fw-name=%s --boot-time=%lu --hw-mac=%s --webpa-ping-time=180 --webpa-inteface-used=erouter0 --webpa-url=fabric.webpa.comcast.net --webpa-backoff-max=9 --parodus-local-url=%s --partner-id=comcast --seshat-url=%s", modelName, serialNumber, manufacturer, lastRebootReason, firmwareVersion, bootTime, deviceMac, ((NULL != parodus_url) ? parodus_url : PARODUS_UPSTREAM), seshat_url);
 
 	LogInfo("parodus command formed is: %s\n", command);
 	
@@ -209,7 +211,7 @@ int main()
 /*                             Internal functions                             */
 /*----------------------------------------------------------------------------*/
 
-static void get_parodus_url(char *parodus_url, char *client_url)
+static void get_url(char *parodus_url, char *client_url, char *seshat_url)
 {
 
 	FILE *fp = fopen(DEVICE_PROPS_FILE, "r");
@@ -234,6 +236,12 @@ static void get_parodus_url(char *parodus_url, char *client_url)
 			strncpy(atom_ip, value, (strlen(str) - strlen("ATOM_INTERFACE_IP=")));
 		    }
 		   
+                    if(value = strstr(str, "SESHAT_URL="))
+                    {
+                        value = value + strlen("SESHAT_URL=");
+                        strncpy(seshat_url, value, (strlen(str) - strlen("SESHAT_URL=")));
+                    }
+
 		}
 	}
 	else
@@ -254,10 +262,17 @@ static void get_parodus_url(char *parodus_url, char *client_url)
 	
 	}
 	
+        if (0 == seshat_url[0])
+        {
+                LogInfo("seshat_url is not present in device. properties:%s\n", seshat_url);
+
+        }
+
 	snprintf(client_url, 64, "tcp://%s:%d", atom_ip, CLIENT_PORT_NUM);
 	LogInfo("client_url formed is %s\n", client_url);
 	LogInfo("parodus_url formed is %s\n", parodus_url);	
- 
+        LogInfo("seshat_url formed is %s\n", seshat_url);
+
  }
  
 static int addParodusCmdToFile(char *command)
