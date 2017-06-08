@@ -20,7 +20,12 @@ if PARODUS_ENABLE
 if CCSP_ARCH_ARM
 PARODUS_OPT = parodusStart
 endif
+
+if NOTIFYLEASE_ENABLE
+NOTIFY = Notify_Lease
+endif
 endif
 
-SUBDIRS = Psmcli LTime print_uptime Notify_Lease $(PARODUS_OPT)
+
+SUBDIRS = Psmcli LTime print_uptime $(NOTIFY) $(PARODUS_OPT)
 
