@@ -674,6 +674,7 @@ unsigned int process_get(int const argCnt, char const * const argVars[], char co
     int cmd_index = 2;
     int cmd_cnt = argCnt - 2;
     unsigned int ret = 0;
+    unsigned int iter = 0;
     unsigned int func_ret = CCSP_SUCCESS;
     char *psmValue = NULL;
     unsigned int psmType = ccsp_string;
@@ -682,10 +683,14 @@ unsigned int process_get(int const argCnt, char const * const argVars[], char co
     // Loop over the commands and extract the values
     while(cmd_cnt--) {
         ret = 0;
+	iter = 0;
+	do {
         ret = PSM_Get_Record_Value2((void*)busHandle, 
                                     subsys_prefix, //PSMCLI_SUBSYSTEM_PREFIX,
                                     argVars[cmd_index],
                                     &psmType, &psmValue);
+	iter++;
+	} while (( psmValue == NULL ) && ( iter < 3 ) );
         if (ret == CCSP_SUCCESS) {
             if(psmValue != NULL) {
                 printf("%s\n", psmValue);
@@ -734,6 +739,7 @@ unsigned int process_getdetail(int const argCnt, char const * const argVars[], c
     int cmd_index = 2;
     int cmd_cnt = argCnt - 2;
     unsigned int ret = 0;
+    unsigned int iter = 0;
     unsigned int func_ret = CCSP_SUCCESS;
     char *psmValue = NULL;
     unsigned int psmType = ccsp_string;
@@ -743,10 +749,14 @@ unsigned int process_getdetail(int const argCnt, char const * const argVars[], c
     // Loop over the commands and extract the values
     while(cmd_cnt--) {
         ret = 0;
+	iter = 0;
+	do {
         ret = PSM_Get_Record_Value2((void*)busHandle, 
                                     subsys_prefix, // PSMCLI_SUBSYSTEM_PREFIX,
                                     argVars[cmd_index],
                                     &psmType, &psmValue);
+	iter++;
+	} while (( psmValue == NULL ) && ( iter < 3 ) );
         
         if (ret == CCSP_SUCCESS) {
             if (psmValue != NULL) {
@@ -802,6 +812,7 @@ unsigned int process_get_e(int const argCnt, char const * const argVars[], char 
     int cmd_index = 3; 
     int cmd_cnt = argCnt - 3;
     unsigned int ret = 0;
+    unsigned int iter = 0;
     unsigned int func_ret = CCSP_SUCCESS;
     char *psmValue = NULL;
     unsigned int psmType = ccsp_string;
@@ -830,11 +841,16 @@ unsigned int process_get_e(int const argCnt, char const * const argVars[], char 
         //        CcspTraceDebug(("<%s>[%s]: PSM_Get2 query='%s'\n", prog_name, func_name, argVars[cmd_index+1]));
 
         ret = 0;
+	iter = 0;
+	do {
         ret = PSM_Get_Record_Value2((void*)busHandle, 
                                     subsys_prefix, //PSMCLI_SUBSYSTEM_PREFIX,
                                     argVars[cmd_index+1],
                                     &psmType, 
                                     &psmValue);
+	iter++;
+	} while (( psmValue == NULL ) && ( iter < 3 ) );
+
 
 #ifdef PSMCLI_TESTING_LOCAL
         CcspTraceDebug(("<%s>[%s]: ret=%d", prog_name, func_name, ret));
@@ -900,6 +916,7 @@ unsigned int process_getdetail_e(int const argCnt, char const * const argVars[],
     int cmd_index = 3; 
     int cmd_cnt = argCnt - 3;
     unsigned int ret = 0;
+    unsigned int iter = 0;
     unsigned int func_ret = CCSP_SUCCESS;
     char *psmValue = NULL;
     unsigned int psmType = ccsp_string;
@@ -917,10 +934,14 @@ unsigned int process_getdetail_e(int const argCnt, char const * const argVars[],
     // Loop over the commands and extract the values
     while(cmd_cnt--) {
         ret = 0;
+	iter = 0;
+	do {
         ret = PSM_Get_Record_Value2((void*)busHandle, 
                                     subsys_prefix, //PSMCLI_SUBSYSTEM_PREFIX,
                                     argVars[cmd_index+1],
                                     &psmType, &psmValue);
+	iter++;
+	} while (( psmValue == NULL ) && ( iter < 3 ) );
         
         if (ret == CCSP_SUCCESS) {
             if (psmValue != NULL) {
