@@ -93,6 +93,15 @@ int main()
         {
                 LogInfo("Failed to initiate DB\n");
         }
+        
+        if ( cm_hal_InitDB() == 0)
+        {
+                LogInfo("cm_hal DB initiated successfully\n");
+        }
+        else
+        {
+                LogInfo("Failed to initiate cm_hal DB\n");
+        }
 
 	if ( platform_hal_GetModelName(modelName) == 0)
 	{
