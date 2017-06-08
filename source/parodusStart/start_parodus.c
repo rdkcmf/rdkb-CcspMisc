@@ -55,6 +55,9 @@
 #define MAX_BUF_SIZE 		      1024
 #define LogInfo(...)                  _START_LOG(__VA_ARGS__)
 
+#ifdef CONFIG_CISCO
+#define CONFIG_VENDOR_NAME  "Cisco"
+#endif
 /*----------------------------------------------------------------------------*/
 /*                             Function Prototypes                            */
 /*----------------------------------------------------------------------------*/
