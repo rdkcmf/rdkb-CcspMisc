@@ -16,8 +16,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-if PARODUS_ENABLE
 if CCSP_ARCH_ARM
+if PARODUS_ENABLE
 PARODUS_OPT = parodusStart
 endif
 
