@@ -274,7 +274,7 @@ Days[6] = 0;
 	}
 }
 
-ModifyDay(int cflag,int *Days_Mod,int *Days)
+void ModifyDay(int cflag,int *Days_Mod,int *Days)
 {
     int i = 0;
     if(cflag == 1)
