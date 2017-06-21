@@ -50,7 +50,6 @@
 
 #define PARODUS_UPSTREAM              "tcp://127.0.0.1:6666"
 #define DEVICE_PROPS_FILE             "/etc/device.properties"
-#define CLIENT_PORT_NUM     	      6667
 #define MODULE 			      "PARODUS"
 #define MAX_BUF_SIZE 		      1024
 #define LogInfo(...)                  _START_LOG(__VA_ARGS__)
@@ -61,7 +60,7 @@
 /*----------------------------------------------------------------------------*/
 /*                             Function Prototypes                            */
 /*----------------------------------------------------------------------------*/
-static void get_url(char *parodus_url, char *client_url, char *seshat_url);
+static void get_url(char *parodus_url, char *seshat_url);
 static int addParodusCmdToFile(char *command);
 static void _START_LOG(const char *msg, ...);
 
@@ -79,7 +78,6 @@ int main()
 	char manufacturer[64]={'\0'};
 	CMMGMT_CM_DHCP_INFO dhcpinfo;
 	char parodus_url[64] = {'\0'};
-        char client_url[64] = {'\0'};
         char seshat_url[64] = {'\0'};
         char command[1024]={'\0'};
         unsigned long bootTime=0;
@@ -194,7 +192,7 @@ int main()
 	}
 
          LogInfo("Fetch parodus url from device.properties file\n");
-	 get_url(parodus_url, client_url, seshat_url);
+	 get_url(parodus_url, seshat_url);
 	 LogInfo("parodus_url returned is %s\n", parodus_url);
          LogInfo("seshat_url returned is %s\n", seshat_url);
 	 
@@ -223,11 +221,10 @@ int main()
 /*                             Internal functions                             */
 /*----------------------------------------------------------------------------*/
 
-static void get_url(char *parodus_url, char *client_url, char *seshat_url)
+static void get_url(char *parodus_url, char *seshat_url)
 {
 
 	FILE *fp = fopen(DEVICE_PROPS_FILE, "r");
-	char atom_ip[64] = {'\0'};
 	
 	if (NULL != fp)
 	{
@@ -242,12 +239,6 @@ static void get_url(char *parodus_url, char *client_url, char *seshat_url)
 			strncpy(parodus_url, value, (strlen(str) - strlen("PARODUS_URL=")));
 		    }
 		    
-		    if(value = strstr(str, "ATOM_INTERFACE_IP="))
-		    {
-			value = value + strlen("ATOM_INTERFACE_IP=");
-			strncpy(atom_ip, value, (strlen(str) - strlen("ATOM_INTERFACE_IP=")));
-		    }
-		   
                     if(value = strstr(str, "SESHAT_URL="))
                     {
                         value = value + strlen("SESHAT_URL=");
@@ -268,20 +259,12 @@ static void get_url(char *parodus_url, char *client_url, char *seshat_url)
 	
 	}
 	
-	if (0 == atom_ip[0])
-	{
-		LogInfo("atom_ip is not present in device. properties:%s\n", atom_ip);
-	
-	}
-	
         if (0 == seshat_url[0])
         {
                 LogInfo("seshat_url is not present in device. properties:%s\n", seshat_url);
 
         }
 
-	snprintf(client_url, 64, "tcp://%s:%d", atom_ip, CLIENT_PORT_NUM);
-	LogInfo("client_url formed is %s\n", client_url);
 	LogInfo("parodus_url formed is %s\n", parodus_url);	
         LogInfo("seshat_url formed is %s\n", seshat_url);
 
