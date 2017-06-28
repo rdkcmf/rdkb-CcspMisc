@@ -48,6 +48,10 @@
 #include <ccsp/cm_hal.h>
 #include <autoconf.h>
 
+#ifdef _PLATFORM_RASPBERRYPI_
+#include "ccsp_vendor.h"
+#endif
+
 #define PARODUS_UPSTREAM              "tcp://127.0.0.1:6666"
 #define DEVICE_PROPS_FILE             "/etc/device.properties"
 #define MODULE 			      "PARODUS"
