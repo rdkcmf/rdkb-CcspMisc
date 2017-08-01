@@ -14,7 +14,7 @@ int ConvLocalToUTC(char* LocalTime, char* UtcTime);
 
 time_t getOffset()
 {
-    time_t off;
+    time_t off = 0;
     char a[100];
     char *pTimeOffset = a;
 #ifdef UTC_ENABLE
