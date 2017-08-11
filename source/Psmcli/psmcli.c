@@ -171,7 +171,7 @@ int main(int argc, char**argv)
         strcat(cmdLine, " ");
     }
     if(i == argc-1 && (strlen(argv[i])+strlen(cmdLine)+1)<=PSMCLI_STRLEN_MAX)
-        strcat(cmdLine, argv[argc-1]);
+        strcat(cmdLine, argv[i]);
 
 #ifdef PSMCLI_TESTING_LOCAL
     // Echo input

@@ -31,8 +31,7 @@ int main(int argc, char *argv[])
     if(argv[2] != NULL)
     {
         printf("BootUpTime info need to be logged in this file : %s\n", argv[2]);
-        strcpy(BOOT_TIME_LOG_FILE, argv[2]);
-
+        strncpy(BOOT_TIME_LOG_FILE, argv[2], sizeof(BOOT_TIME_LOG_FILE)-1);
     }
 
     l_fBootLogFile = fopen(BOOT_TIME_LOG_FILE, "a+");
