@@ -64,6 +64,7 @@
 #define LogError(...)                 _START_LOG(LOG_ERROR, __VA_ARGS__)
 #define WEBPA_CFG_FILE		      "/nvram/webpa_cfg.json"
 #define WEBPA_CFG_FIRMWARE_VER	      "oldFirmwareVersion"
+#define SSL_CERT_BUNDLE               "/etc/ssl/certs/ca-certificates.crt"
 
 #ifdef CONFIG_CISCO
 #define CONFIG_VENDOR_NAME  "Cisco"
@@ -219,10 +220,10 @@ int main()
 
 #ifdef ENABLE_SESHAT
 	snprintf(command, sizeof(command),
-	"/usr/bin/parodus --hw-model=%s --hw-serial-number=%s --hw-manufacturer=%s --hw-last-reboot-reason=%s --fw-name=%s --boot-time=%lu --hw-mac=%s --webpa-ping-time=180 --webpa-inteface-used=erouter0 --webpa-url=fabric.webpa.comcast.net --webpa-backoff-max=9 --parodus-local-url=%s --partner-id=comcast --seshat-url=%s", modelName, serialNumber, manufacturer, lastRebootReason, firmwareVersion, bootTime, deviceMac, ((NULL != parodus_url) ? parodus_url : PARODUS_UPSTREAM), seshat_url);
+	"/usr/bin/parodus --hw-model=%s --hw-serial-number=%s --hw-manufacturer=%s --hw-last-reboot-reason=%s --fw-name=%s --boot-time=%lu --hw-mac=%s --webpa-ping-time=180 --webpa-inteface-used=erouter0 --webpa-url=fabric.webpa.comcast.net --webpa-backoff-max=9 --parodus-local-url=%s --partner-id=comcast --ssl-cert-path=%s --seshat-url=%s", modelName, serialNumber, manufacturer, lastRebootReason, firmwareVersion, bootTime, deviceMac, ((NULL != parodus_url) ? parodus_url : PARODUS_UPSTREAM), SSL_CERT_BUNDLE, seshat_url);
 #else
         snprintf(command, sizeof(command),
-	"/usr/bin/parodus --hw-model=%s --hw-serial-number=%s --hw-manufacturer=%s --hw-last-reboot-reason=%s --fw-name=%s --boot-time=%lu --hw-mac=%s --webpa-ping-time=180 --webpa-inteface-used=erouter0 --webpa-url=fabric.webpa.comcast.net --webpa-backoff-max=9 --parodus-local-url=%s --partner-id=comcast", modelName, serialNumber, manufacturer, lastRebootReason, firmwareVersion, bootTime, deviceMac, ((NULL != parodus_url) ? parodus_url : PARODUS_UPSTREAM));
+	"/usr/bin/parodus --hw-model=%s --hw-serial-number=%s --hw-manufacturer=%s --hw-last-reboot-reason=%s --fw-name=%s --boot-time=%lu --hw-mac=%s --webpa-ping-time=180 --webpa-inteface-used=erouter0 --webpa-url=fabric.webpa.comcast.net --webpa-backoff-max=9 --parodus-local-url=%s --partner-id=comcast --ssl-cert-path=%s", modelName, serialNumber, manufacturer, lastRebootReason, firmwareVersion, bootTime, deviceMac, ((NULL != parodus_url) ? parodus_url : PARODUS_UPSTREAM), SSL_CERT_BUNDLE);
 #endif
 
 	LogInfo("parodus command formed is: %s\n", command);
