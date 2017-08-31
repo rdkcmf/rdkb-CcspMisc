@@ -74,13 +74,13 @@
 static void get_url(char *parodus_url, char *seshat_url);
 static int addParodusCmdToFile(char *command);
 static void _START_LOG(int level, const char *msg, ...);
-static void getFirmwareFromJson(cJSON **json, char * cfgJson_firmware);
+static void getAndUpdateFirmwareJson(char * curfirmwareVersion, char * cfgJson_firmware);
 static int  writeToJson(char *data);
 static void getValuesFromPsmDb(char *names[], char **values,int count);
 static void getValuesFromSysCfgDb(char *names[], char **values,int count);
 static int setValuesToPsmDb(char *names[], char **values,int count);
 static int syncXpcParamsOnUpgrade(char *lastRebootReason, char *firmwareVersion);
-static void free_sync_db_items(int paramCount,char *psmValues[],char *sysCfgValues[],cJSON *json);
+static void free_sync_db_items(int paramCount,char *psmValues[],char *sysCfgValues[]);
 static char *pathPrefix  = "eRT.com.cisco.spvtg.ccsp.webpa.";
 /*----------------------------------------------------------------------------*/
 /*                             External Functions                             */
@@ -357,12 +357,15 @@ static void _START_LOG(int level, const char *msg, ...)
 	printf("%s : [mod=%s, lvl=%s] %s", curtime, MODULE, _level[level], buf);
 }
 
-void getFirmwareFromJson(cJSON **json, char * cfgJson_firmware)
+void getAndUpdateFirmwareJson( char * curfirmwareVersion, char * cfgJson_firmware)
 {
 	char *data = NULL;
+	cJSON *json = NULL;
 	cJSON *oldFirmwareObj = NULL;
 	FILE *fileRead = NULL;
+	char *out =NULL;
 	int len;
+	int configUpdateStatus = -1;
 	fileRead = fopen( WEBPA_CFG_FILE, "r+" );    
 	if( fileRead == NULL ) 
 	{
@@ -378,21 +381,48 @@ void getFirmwareFromJson(cJSON **json, char * cfgJson_firmware)
 
 	if( data != NULL ) 
 	{
-	    *json = cJSON_Parse( data );
-	    if( !*json ) 
+	    json = cJSON_Parse( data );
+	    if( !json ) 
 	    {
 	        LogError( "json parse error: [%s]\n", cJSON_GetErrorPtr() );
 	    } 
 	    else 
 	    {
-	        oldFirmwareObj = cJSON_GetObjectItem( *json, WEBPA_CFG_FIRMWARE_VER );
+	        oldFirmwareObj = cJSON_GetObjectItem( json, WEBPA_CFG_FIRMWARE_VER );
 	        if( oldFirmwareObj != NULL) 
 	        {
-	            char *oldFirmware = cJSON_GetObjectItem( *json, WEBPA_CFG_FIRMWARE_VER )->valuestring;
+	            char *oldFirmware = cJSON_GetObjectItem( json, WEBPA_CFG_FIRMWARE_VER )->valuestring;
 	            strcpy(cfgJson_firmware, oldFirmware);
+	            
+	            cJSON_ReplaceItemInObject(json, WEBPA_CFG_FIRMWARE_VER, cJSON_CreateString(curfirmwareVersion));
+				out = cJSON_Print(json);
+				LogInfo("Updated json content is %s\n", out);
+				configUpdateStatus = writeToJson(out);
+
+				if(configUpdateStatus == 0)
+				{
+					LogInfo("Updated current Firmware version to config file\n");
+				}
+				else
+				{
+					LogError("Error in updating current Firmware version to config file\n");
+				}
+
+				if(out !=NULL)
+				{
+					free(out);
+					out = NULL;
+				}
         	}
-       
+        	else
+        	{
+        		LogError("%s not available in webpa_cfg.json file\n",WEBPA_CFG_FIRMWARE_VER);	
+        	}
 	    }
+	    if(json != NULL)
+		{
+			cJSON_Delete(json);
+		}
 	    free(data);
 	    data = NULL;
 	}
@@ -519,18 +549,14 @@ static void getValuesFromSysCfgDb(char *names[], char **values,int count)
 static int syncXpcParamsOnUpgrade(char *lastRebootReason, char *firmwareVersion)
 {
 	int paramCount = 0, status = 0, i = 0;
-	cJSON *json = NULL;
+	
 	char cfgJson_firmware[64]={'\0'};
-	int configUpdateStatus = -1;
-        char *out =NULL;
-        cJSON *FirmwareObj = NULL;
-        char *paramList[] = {"X_COMCAST-COM_CMC","X_COMCAST-COM_CID","X_COMCAST-COM_SyncProtocolVersion"};
+    char *paramList[] = {"X_COMCAST-COM_CMC","X_COMCAST-COM_CID","X_COMCAST-COM_SyncProtocolVersion"};
 	char *psmValues[MAX_VALUE_SIZE] = {'\0'};
 	char *sysCfgValues[MAX_VALUE_SIZE] = {'\0'};
 
 	paramCount = sizeof(paramList)/sizeof(paramList[0]);
-	
-	getFirmwareFromJson(&json, cfgJson_firmware);
+	getAndUpdateFirmwareJson(firmwareVersion,cfgJson_firmware);
 	LogInfo("cfgJson_firmware fetched from webpa_cfg.json is %s\n", cfgJson_firmware);
 	
 	getValuesFromPsmDb(paramList, psmValues, paramCount);
@@ -539,7 +565,7 @@ static int syncXpcParamsOnUpgrade(char *lastRebootReason, char *firmwareVersion)
 	        if(psmValues[i] == NULL)
 	        {
 	        	LogInfo("PsmDb-> value is NULL for %s\n",paramList[i]);
-	        	free_sync_db_items(paramCount, psmValues, sysCfgValues, json);
+	        	free_sync_db_items(paramCount, psmValues, sysCfgValues);
 	        	return -1;
 	        }
 	        else
@@ -559,7 +585,7 @@ static int syncXpcParamsOnUpgrade(char *lastRebootReason, char *firmwareVersion)
 			if(sysCfgValues[i] == NULL)
 	        	{
 	        		LogInfo("SysCfgDb-> value is NULL for %s\n", paramList[i]);
-	        		free_sync_db_items(paramCount, psmValues, sysCfgValues, json);
+	        		free_sync_db_items(paramCount, psmValues, sysCfgValues);
 	        		return -2;
 	        	}
 	        	else
@@ -572,57 +598,28 @@ static int syncXpcParamsOnUpgrade(char *lastRebootReason, char *firmwareVersion)
 		if(status == 0)
 		{
 		        LogInfo("Successfully set values to PSM DB\n");
-			if(json != NULL)
-			{
-				FirmwareObj = cJSON_GetObjectItem( json, WEBPA_CFG_FIRMWARE_VER );
-				if (FirmwareObj != NULL)
-				{
-					cJSON_ReplaceItemInObject(json, WEBPA_CFG_FIRMWARE_VER, cJSON_CreateString(firmwareVersion));
-					out = cJSON_Print(json);
-					LogInfo("Updated json content is %s\n", out);
-					configUpdateStatus = writeToJson(out);
-		
-					if(configUpdateStatus == 0)
-			    		{
-			    			LogInfo("After db sync, updated Firmware version to config file\n");
-			    		}
-			    		else
-			    		{
-			    			LogError("Error in updating Firmware version to config file\n");
-			    		}
-			    		
-			    		if(out !=NULL)
-			    		{
-			    			free(out);
-			    			out = NULL;
-			    		}
-		    		}
-		    		else
-		    		{
-		    			LogError("oldFirmwareVersion is not present in config\n");
-		    		}
-	    		}
-    		}
-    		else
-    		{
+    	}
+    	else
+    	{
     			LogError("Failed to set values to PSM DB\n");
-    			free_sync_db_items(paramCount, psmValues, sysCfgValues, json);
+    			free_sync_db_items(paramCount, psmValues, sysCfgValues);
     			return -2;
-    		}
+    	}
     		
 	}
 	else
 	{
 		LogInfo("Sync for bbhm and syscfg is not required\n");
-		free_sync_db_items(paramCount, psmValues, sysCfgValues, json);
+		free_sync_db_items(paramCount, psmValues, sysCfgValues);
 		return -1;
 	}
 	
-	free_sync_db_items(paramCount, psmValues, sysCfgValues, json);
+	
+	free_sync_db_items(paramCount, psmValues, sysCfgValues);
 	return 0;
 }
 
-static void free_sync_db_items(int paramCount, char *psmValues[], char *sysCfgValues[], cJSON *json)
+static void free_sync_db_items(int paramCount, char *psmValues[], char *sysCfgValues[])
 {
 	int i;
 	for(i = 0; i<paramCount; i++)
@@ -638,10 +635,6 @@ static void free_sync_db_items(int paramCount, char *psmValues[], char *sysCfgVa
 	       		free(sysCfgValues[i]);
 	       		sysCfgValues[i] = NULL;
 	       	}
-	}
-	if(json != NULL)
-	{
-		cJSON_Delete(json);
 	}
 
 }
