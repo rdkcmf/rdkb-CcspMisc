@@ -363,7 +363,7 @@ void getAndUpdateFirmwareJson( char * curfirmwareVersion, char * cfgJson_firmwar
 	char *data = NULL;
 	cJSON *json = NULL;
 	cJSON *oldFirmwareObj = NULL;
-	FILE *fileRead = NULL;
+	FILE *fileRead;
 	char *out =NULL;
 	int len;
 	int configUpdateStatus = -1;
@@ -371,13 +371,19 @@ void getAndUpdateFirmwareJson( char * curfirmwareVersion, char * cfgJson_firmwar
 	if( fileRead == NULL ) 
 	{
 	    LogError( "Error opening file in read mode\n" );
+	    return;
 	}
 	
 	fseek( fileRead, 0, SEEK_END );
 	len = ftell( fileRead );
 	fseek( fileRead, 0, SEEK_SET );
 	data = ( char* )malloc( len + 1 );
-	fread( data, 1, len, fileRead );
+        if (data != NULL) {
+	    fread( data, 1, len, fileRead );
+        } else {
+	    LogError("malloc() failed\n");
+	}
+
 	fclose( fileRead );
 
 	if( data != NULL ) 
