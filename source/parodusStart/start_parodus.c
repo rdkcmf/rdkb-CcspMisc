@@ -46,11 +46,17 @@
 #include <stdlib.h>
 #include <ccsp/platform_hal.h>
 #include <ccsp/cm_hal.h>
+#if !(_COSA_BCM_MIPS_ || _COSA_DRG_TPG_ || CONFIG_CISCO)
 #include <autoconf.h>
+#endif
 #include "cJSON.h"
 
 #ifdef _PLATFORM_RASPBERRYPI_
 #include "ccsp_vendor.h"
+#endif
+
+#if defined(_COSA_BCM_MIPS_)
+#include "dpoe_hal.h"
 #endif
 
 #define PARODUS_UPSTREAM              "tcp://127.0.0.1:6666"
@@ -72,6 +78,11 @@
 #ifdef CONFIG_CISCO
 #define CONFIG_VENDOR_NAME  "Cisco"
 #endif
+
+#if (_COSA_BCM_MIPS_ || _COSA_DRG_TPG_)
+#define CONFIG_VENDOR_NAME "ARRIS Group, Inc."
+#endif
+
 /*----------------------------------------------------------------------------*/
 /*                             Function Prototypes                            */
 /*----------------------------------------------------------------------------*/
@@ -98,7 +109,11 @@ int main()
 	char lastRebootReason[64]={'\0'};
 	char deviceMac[64]={'\0'};
 	char manufacturer[64]={'\0'};
+#if defined(_COSA_BCM_MIPS_)
+	dpoe_mac_address_t tDpoe_Mac;
+#else
 	CMMGMT_CM_DHCP_INFO dhcpinfo;
+#endif
 	char parodus_url[64] = {'\0'};
         char seshat_url[64] = {'\0'};
 	char build_type[16] = {'\0'};
@@ -182,7 +197,14 @@ int main()
 		syscfg_get( NULL, "X_RDKCENTRAL-COM_LastRebootReason", lastRebootReason, sizeof(lastRebootReason));
         	LogInfo("lastRebootReason is %s\n", lastRebootReason);
         }
-        
+#if defined(_COSA_BCM_MIPS_)
+	if( dpoe_getOnuId(&tDpoe_Mac) == 0)
+	{
+		sprintf(deviceMac, "%02x:%02x:%02x:%02x:%02x:%02x",tDpoe_Mac.macAddress[0], tDpoe_Mac.macAddress[1],
+                tDpoe_Mac.macAddress[2], tDpoe_Mac.macAddress[3], tDpoe_Mac.macAddress[4],tDpoe_Mac.macAddress[5]);
+		LogInfo("deviceMac is %s\n", deviceMac);
+	}
+#else
          if (cm_hal_GetDHCPInfo(&dhcpinfo) == 0)
          {
          	LogInfo("MACAddress = %s\n", dhcpinfo.MACAddress);
@@ -190,6 +212,7 @@ int main()
          	LogInfo("deviceMac is %s\n", deviceMac);
 
          }
+#endif
          else
          {
          	LogError("Unable to get MACAdress\n");
@@ -530,6 +553,11 @@ static void getValuesFromPsmDb(char *names[], char **values,int count)
 		    values[i] = NULL;
 	        }
 	    }
+	    if(feof(out))
+	    {
+		LogInfo("End of file reached\n");
+		break;
+	    }
         }
         pclose(out);
     }
@@ -568,6 +596,11 @@ static int setValuesToPsmDb(char *names[], char **values,int count)
                 pclose(out);
                 return -1;
             }
+	    if(feof(out))
+	    {
+		LogInfo("End of file reached\n");
+		break;
+	    }
         }
         pclose(out);
     }

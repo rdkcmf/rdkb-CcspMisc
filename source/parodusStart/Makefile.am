@@ -40,6 +40,10 @@ EXTRA_DEPENDENCIES= -llmapi
 parodusStart_LDFLAGS += -lhal_platform
 endif
 
+if CCSP_ARCH_MIPS
+parodusStart_LDFLAGS = -lhal_pon
+endif
+
 parodusStart_LDADD=$(EXTRA_DEPENDENCIES)
 
 

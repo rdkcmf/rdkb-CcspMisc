@@ -17,15 +17,15 @@
 # limitations under the License.
 ##########################################################################
 if CCSP_ARCH_ARM
-if PARODUS_ENABLE
-PARODUS_OPT = parodusStart
-endif
-
 if NOTIFYLEASE_ENABLE
 NOTIFY = Notify_Lease
 endif
 endif
 
+
+if PARODUS_ENABLE
+PARODUS_OPT = parodusStart
+endif
 
 SUBDIRS = Psmcli LTime print_uptime $(NOTIFY) $(PARODUS_OPT)
 
