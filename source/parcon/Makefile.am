@@ -16,16 +16,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
+bin_PROGRAMS = parcon
+
+AM_CFLAGS = -I$(top_srcdir)/source -I$(top_srcdir)/source/include -I$(top_srcdir)/source/util -I$(top_srcdir)/../hal/include
+hardware_platform = i686-linux-gnu
+AM_LDFLAGS =  -lpthread -lz
+
+PARCON_SOURCES = parcon.c
+
 if CCSP_ARCH_ARM
-if NOTIFYLEASE_ENABLE
-NOTIFY = Notify_Lease
+PARCON_CPPFLAGS = -D_ANSC_LINUX -D_ANSC_USER -I$(top_srcdir)/../hal/include
 endif
-endif
-
-
-if PARODUS_ENABLE
-PARODUS_OPT = parodusStart
-endif
-
-SUBDIRS = Psmcli parcon LTime print_uptime $(NOTIFY) $(PARODUS_OPT)
 

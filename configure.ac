@@ -106,6 +106,7 @@ AC_FUNC_MALLOC
 AC_CONFIG_FILES(
 	source/Psmcli/Makefile
 	source/LTime/Makefile
+	source/parcon/Makefile
     source/print_uptime/Makefile
 	source/Makefile
 	Makefile
