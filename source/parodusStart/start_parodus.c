@@ -104,6 +104,9 @@ int main()
         struct timeval currentTime;
        	int cmdUpdateStatus = -1;
         int upTime=0, syncStatus= -1;
+	char *paramList[] = {"X_COMCAST-COM_CMC","X_COMCAST-COM_CID","X_COMCAST-COM_SyncProtocolVersion"};
+	int paramCount = 0, i = 0;
+	char *psmValues[MAX_VALUE_SIZE] = {'\0'};
 
         if ( platform_hal_PandMDBInit() == 0)
         {
@@ -250,6 +253,16 @@ int main()
 	else
 	{
 		LogInfo("DB sync is not required or failed to sync!!\n");
+	}
+	paramCount = sizeof(paramList)/sizeof(paramList[0]);
+	getValuesFromPsmDb(paramList, psmValues, paramCount);
+	LogInfo("DB details are %s = %s %s = %s %s = %s\n",paramList[0],psmValues[0],paramList[1],psmValues[1],paramList[2],psmValues[2]);
+	for(i=0;i<paramCount;i++)
+	{
+		if(psmValues[i])
+		{
+			free(psmValues[i]);
+		}
 	}
 	return 0;
 }
