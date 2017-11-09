@@ -66,6 +66,8 @@
 #define WEBPA_CFG_FIRMWARE_VER	      "oldFirmwareVersion"
 #define SSL_CERT_BUNDLE               "/etc/ssl/certs/ca-certificates.crt"
 #define WEBPA_TOKEN_APPLICATION       "/usr/ccsp/parodus/parodus_token.sh"
+#define WEBPA_SERVER_URL              "fabric.webpa.comcast.net"
+#define WEBPA_CFG_SERVER_URL          "ServerIP"
 
 #ifdef CONFIG_CISCO
 #define CONFIG_VENDOR_NAME  "Cisco"
@@ -73,10 +75,10 @@
 /*----------------------------------------------------------------------------*/
 /*                             Function Prototypes                            */
 /*----------------------------------------------------------------------------*/
-static void get_url(char *parodus_url, char *seshat_url);
+static void get_url(char *parodus_url, char *seshat_url, char *build_type);
 static int addParodusCmdToFile(char *command);
 static void _START_LOG(int level, const char *msg, ...);
-static void getAndUpdateFirmwareJson(char * curfirmwareVersion, char * cfgJson_firmware);
+static void getValueFromCfgJson( char *key, char **value, cJSON **out);
 static int  writeToJson(char *data);
 static void getValuesFromPsmDb(char *names[], char **values,int count);
 static void getValuesFromSysCfgDb(char *names[], char **values,int count);
@@ -99,6 +101,9 @@ int main()
 	CMMGMT_CM_DHCP_INFO dhcpinfo;
 	char parodus_url[64] = {'\0'};
         char seshat_url[64] = {'\0'};
+	char build_type[16] = {'\0'};
+	char *webpaUrl = NULL;
+	cJSON *out = NULL;
         char command[1024]={'\0'};
         unsigned long bootTime=0;
         struct sysinfo s_info;
@@ -215,19 +220,36 @@ int main()
 	}
 
          LogInfo("Fetch parodus url from device.properties file\n");
-	 get_url(parodus_url, seshat_url);
+	 get_url(parodus_url, seshat_url, build_type);
 	 LogInfo("parodus_url returned is %s\n", parodus_url);
          LogInfo("seshat_url returned is %s\n", seshat_url);
-	 
+	 LogInfo("build_type returned is %s\n", build_type);
+
+	if(strncmp(build_type, "dev", strlen(build_type)+1) == 0)
+	{
+		getValueFromCfgJson( WEBPA_CFG_SERVER_URL, &webpaUrl, &out);
+		LogInfo("webpaUrl fetched from webpa_cfg.json is %s\n", webpaUrl);
+		if(out != NULL)
+		{
+			cJSON_Delete(out);
+		}	
+		
+		
+	}
+	if(webpaUrl == NULL)
+	{	
+		LogInfo("Setting webpaUrl to default server IP\n");
+		webpaUrl = strdup(WEBPA_SERVER_URL);
+	} 		
 	 
 	 LogInfo("Framing command for parodus\n");
 
 #ifdef ENABLE_SESHAT
 	snprintf(command, sizeof(command),
-	"/usr/bin/parodus --hw-model=%s --hw-serial-number=%s --hw-manufacturer=%s --hw-last-reboot-reason=%s --fw-name=%s --boot-time=%lu --hw-mac=%s --webpa-ping-time=180 --webpa-interface-used=erouter0 --webpa-url=fabric.webpa.comcast.net --webpa-backoff-max=9 --parodus-local-url=%s --partner-id=comcast --ssl-cert-path=%s --seshat-url=%s --webpa-token=%s", modelName, serialNumber, manufacturer, lastRebootReason, firmwareVersion, bootTime, deviceMac, ((NULL != parodus_url) ? parodus_url : PARODUS_UPSTREAM), SSL_CERT_BUNDLE, seshat_url, WEBPA_TOKEN_APPLICATION);
+	"/usr/bin/parodus --hw-model=%s --hw-serial-number=%s --hw-manufacturer=%s --hw-last-reboot-reason=%s --fw-name=%s --boot-time=%lu --hw-mac=%s --webpa-ping-time=180 --webpa-interface-used=erouter0 --webpa-url=%s --webpa-backoff-max=9 --parodus-local-url=%s --partner-id=comcast --ssl-cert-path=%s --seshat-url=%s --webpa-token=%s", modelName, serialNumber, manufacturer, lastRebootReason, firmwareVersion, bootTime, deviceMac, webpaUrl, ((NULL != parodus_url) ? parodus_url : PARODUS_UPSTREAM), SSL_CERT_BUNDLE, seshat_url, WEBPA_TOKEN_APPLICATION);
 #else
         snprintf(command, sizeof(command),
-	"/usr/bin/parodus --hw-model=%s --hw-serial-number=%s --hw-manufacturer=%s --hw-last-reboot-reason=%s --fw-name=%s --boot-time=%lu --hw-mac=%s --webpa-ping-time=180 --webpa-interface-used=erouter0 --webpa-url=fabric.webpa.comcast.net --webpa-backoff-max=9 --parodus-local-url=%s --partner-id=comcast --ssl-cert-path=%s --webpa-token=%s", modelName, serialNumber, manufacturer, lastRebootReason, firmwareVersion, bootTime, deviceMac, ((NULL != parodus_url) ? parodus_url : PARODUS_UPSTREAM), SSL_CERT_BUNDLE, WEBPA_TOKEN_APPLICATION);
+	"/usr/bin/parodus --hw-model=%s --hw-serial-number=%s --hw-manufacturer=%s --hw-last-reboot-reason=%s --fw-name=%s --boot-time=%lu --hw-mac=%s --webpa-ping-time=180 --webpa-interface-used=erouter0 --webpa-url=%s --webpa-backoff-max=9 --parodus-local-url=%s --partner-id=comcast --ssl-cert-path=%s --webpa-token=%s", modelName, serialNumber, manufacturer, lastRebootReason, firmwareVersion, bootTime, deviceMac, webpaUrl, ((NULL != parodus_url) ? parodus_url : PARODUS_UPSTREAM), SSL_CERT_BUNDLE, WEBPA_TOKEN_APPLICATION);
 #endif
 
 	LogInfo("parodus command formed is: %s\n", command);
@@ -242,6 +264,12 @@ int main()
 		LogError("Error in adding parodus cmd to file\n");
 	}
 
+	if(webpaUrl != NULL)
+	{
+		free(webpaUrl);
+		webpaUrl = NULL;
+	}
+		
 	syncStatus = syncXpcParamsOnUpgrade(lastRebootReason, firmwareVersion);
 	if(syncStatus == 0)
 	{
@@ -272,7 +300,7 @@ int main()
 /*                             Internal functions                             */
 /*----------------------------------------------------------------------------*/
 
-static void get_url(char *parodus_url, char *seshat_url)
+static void get_url(char *parodus_url, char *seshat_url, char *build_type)
 {
 
 	FILE *fp = fopen(DEVICE_PROPS_FILE, "r");
@@ -296,6 +324,11 @@ static void get_url(char *parodus_url, char *seshat_url)
                         strncpy(seshat_url, value, (strlen(str) - strlen("SESHAT_URL=")));
                     }
 
+		     if(value = strstr(str, "BUILD_TYPE="))
+                    {
+                        value = value + strlen("BUILD_TYPE=");
+                        strncpy(build_type, value, (strlen(str) - strlen("BUILD_TYPE="))+1);
+                    }
 		}
 	}
 	else
@@ -306,18 +339,25 @@ static void get_url(char *parodus_url, char *seshat_url)
 	
 	if (0 == parodus_url[0])
 	{
-		LogError("parodus_url is not present in device. properties:%s\n", parodus_url);
+		LogError("parodus_url is not present in device.properties:%s\n", parodus_url);
 	
 	}
 	
         if (0 == seshat_url[0])
         {
-                LogError("seshat_url is not present in device. properties:%s\n", seshat_url);
+                LogError("seshat_url is not present in device.properties:%s\n", seshat_url);
+
+        }
+
+	 if (0 == build_type[0])
+        {
+                LogError("build_type is not present in device.properties:%s\n", build_type);
 
         }
 
 	LogInfo("parodus_url formed is %s\n", parodus_url);	
         LogInfo("seshat_url formed is %s\n", seshat_url);
+	LogInfo("build_type is %s\n", build_type);
 
  }
  
@@ -372,15 +412,13 @@ static void _START_LOG(int level, const char *msg, ...)
 	printf("%s : [mod=%s, lvl=%s] %s", curtime, MODULE, _level[level], buf);
 }
 
-void getAndUpdateFirmwareJson( char * curfirmwareVersion, char * cfgJson_firmware)
+void getValueFromCfgJson( char *key, char **value, cJSON **out)
 {
 	char *data = NULL;
+	cJSON *cfgValObj = NULL;
 	cJSON *json = NULL;
-	cJSON *oldFirmwareObj = NULL;
 	FILE *fileRead;
-	char *out =NULL;
 	int len;
-	int configUpdateStatus = -1;
 	fileRead = fopen( WEBPA_CFG_FILE, "r+" );    
 	if( fileRead == NULL ) 
 	{
@@ -409,43 +447,31 @@ void getAndUpdateFirmwareJson( char * curfirmwareVersion, char * cfgJson_firmwar
 	    } 
 	    else 
 	    {
-	        oldFirmwareObj = cJSON_GetObjectItem( json, WEBPA_CFG_FIRMWARE_VER );
-	        if( oldFirmwareObj != NULL) 
+	    	cfgValObj = cJSON_GetObjectItem( json, key );
+	        if( cfgValObj != NULL) 
 	        {
-	            char *oldFirmware = cJSON_GetObjectItem( json, WEBPA_CFG_FIRMWARE_VER )->valuestring;
-	            strcpy(cfgJson_firmware, oldFirmware);
-	            
-	            cJSON_ReplaceItemInObject(json, WEBPA_CFG_FIRMWARE_VER, cJSON_CreateString(curfirmwareVersion));
-				out = cJSON_Print(json);
-				LogInfo("Updated json content is %s\n", out);
-				configUpdateStatus = writeToJson(out);
+	         	char *valFromJson = cJSON_GetObjectItem( json, key)->valuestring;
 
-				if(configUpdateStatus == 0)
-				{
-					LogInfo("Updated current Firmware version to config file\n");
-				}
-				else
-				{
-					LogError("Error in updating current Firmware version to config file\n");
-				}
-
-				if(out !=NULL)
-				{
-					free(out);
-					out = NULL;
-				}
-        	}
+			if (valFromJson != NULL && strlen(valFromJson) > 0) 
+			{
+				*value = strdup(valFromJson);
+			}	
+			else
+			{
+				*value = NULL;
+			}			
+	
+	       	 }
         	else
         	{
-        		LogError("%s not available in webpa_cfg.json file\n",WEBPA_CFG_FIRMWARE_VER);	
+        		LogError("%s not available in webpa_cfg.json file\n", key);	
         	}
+		
+		*out = json;
 	    }
-	    if(json != NULL)
-		{
-			cJSON_Delete(json);
-		}
-	    free(data);
-	    data = NULL;
+	 free(data);
+	 data = NULL;  
+	    
 	}
 
 }
@@ -570,15 +596,49 @@ static void getValuesFromSysCfgDb(char *names[], char **values,int count)
 static int syncXpcParamsOnUpgrade(char *lastRebootReason, char *firmwareVersion)
 {
 	int paramCount = 0, status = 0, i = 0;
-	
-	char cfgJson_firmware[64]={'\0'};
+	cJSON *out = NULL;
+	char *cfgJson_firmware = NULL;
     char *paramList[] = {"X_COMCAST-COM_CMC","X_COMCAST-COM_CID","X_COMCAST-COM_SyncProtocolVersion"};
 	char *psmValues[MAX_VALUE_SIZE] = {'\0'};
 	char *sysCfgValues[MAX_VALUE_SIZE] = {'\0'};
+	int configUpdateStatus = -1;
+	char *cJsonOut =NULL;
 
 	paramCount = sizeof(paramList)/sizeof(paramList[0]);
-	getAndUpdateFirmwareJson(firmwareVersion,cfgJson_firmware);
-	LogInfo("cfgJson_firmware fetched from webpa_cfg.json is %s\n", cfgJson_firmware);
+	getValueFromCfgJson( WEBPA_CFG_FIRMWARE_VER, &cfgJson_firmware, &out);
+		
+	LogInfo(" Returned json content is: %s\n", cJSON_Print(out));
+	if(out != NULL)
+	{
+		LogInfo("cfgJson_firmware fetched from webpa_cfg.json is %s\n", cfgJson_firmware);
+		cJSON_ReplaceItemInObject(out, WEBPA_CFG_FIRMWARE_VER, cJSON_CreateString(firmwareVersion));
+		
+		cJsonOut = cJSON_Print(out);
+		LogInfo("Updated json content is %s\n", cJsonOut);
+		configUpdateStatus = writeToJson(cJsonOut);
+
+		if(configUpdateStatus == 0)
+		{
+			LogInfo("Updated current Firmware version to config file\n");
+		}
+		else
+		{
+			LogError("Error in updating current Firmware version to config file\n");
+		}
+		if(cJsonOut != NULL)
+		{
+			free(cJsonOut);
+			cJsonOut = NULL;
+		}
+
+		cJSON_Delete(out);
+	}
+
+	else
+	{
+		LogError("Error in fetching data from webpa_cfg.json file\n");
+	}
+
 	
 	getValuesFromPsmDb(paramList, psmValues, paramCount);
 	for(i = 0; i<paramCount; i++)
@@ -626,6 +686,13 @@ static int syncXpcParamsOnUpgrade(char *lastRebootReason, char *firmwareVersion)
     			free_sync_db_items(paramCount, psmValues, sysCfgValues);
     			return -2;
     	}
+	
+		if(cfgJson_firmware != NULL)
+		{
+			free(cfgJson_firmware);
+			cfgJson_firmware = NULL;
+		}
+
     		
 	}
 	else
@@ -634,8 +701,7 @@ static int syncXpcParamsOnUpgrade(char *lastRebootReason, char *firmwareVersion)
 		free_sync_db_items(paramCount, psmValues, sysCfgValues);
 		return -1;
 	}
-	
-	
+		
 	free_sync_db_items(paramCount, psmValues, sysCfgValues);
 	return 0;
 }
