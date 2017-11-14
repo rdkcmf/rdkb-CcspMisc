@@ -96,13 +96,47 @@ static void getValuesFromSysCfgDb(char *names[], char **values,int count);
 static int setValuesToPsmDb(char *names[], char **values,int count);
 static int syncXpcParamsOnUpgrade(char *lastRebootReason, char *firmwareVersion);
 static void free_sync_db_items(int paramCount,char *psmValues[],char *sysCfgValues[]);
+static void get_parodusStart_logFile(char *parodusStart_Log);
 static char *pathPrefix  = "eRT.com.cisco.spvtg.ccsp.webpa.";
+FILE* g_fArmConsoleLog = NULL;
 /*----------------------------------------------------------------------------*/
 /*                             External Functions                             */
 /*----------------------------------------------------------------------------*/
 
-int main()
+int main(int argc, char *argv[])
 {
+	char parodusStart_Log[MAX_BUF_SIZE] = {'\0'};
+	
+	get_parodusStart_logFile(parodusStart_Log);
+
+	g_fArmConsoleLog = freopen(parodusStart_Log, "a+", stderr);
+	if (NULL == g_fArmConsoleLog) 
+	{
+		LogError("Error while opening Log file:%s\n", parodusStart_Log);
+	}
+	else
+	{
+		LogInfo("Successful in opening parodusStart_Log file:%s\n", parodusStart_Log);
+	}
+	
+	if((argc > 1) && (NULL != argv[1]) && (!strcmp(argv[1], "wan-status")))
+	{
+		LogInfo("wan-status event received with state %s\n", argv[2]);
+		if ((NULL != argv[2]) && (!strcmp(argv[2], "started")))
+		{
+			LogInfo("wan-status is ready. Proceed with parodus start up\n");	
+
+		}
+		else
+		{
+			LogInfo("wan-status is not ready , waiting to start parodus..\n");
+			if (NULL != g_fArmConsoleLog)
+			fclose(g_fArmConsoleLog);
+			return 0;
+		}
+	}
+	
+	char unreg_cmd[1024] = {'\0'};
 	char modelName[64]={'\0'};
 	char serialNumber[64]={'\0'};
 	char firmwareVersion[64]={'\0'};
@@ -128,6 +162,12 @@ int main()
 	char *paramList[] = {"X_COMCAST-COM_CMC","X_COMCAST-COM_CID","X_COMCAST-COM_SyncProtocolVersion"};
 	int paramCount = 0, i = 0;
 	char *psmValues[MAX_VALUE_SIZE] = {'\0'};
+	
+	LogInfo("Proceeding to unregister wan-status event\n");
+
+        snprintf(unreg_cmd,sizeof(unreg_cmd),"/etc/utopia/registration.d/02_parodus stop");
+        LogInfo("unreg_cmd is %s\n", unreg_cmd);
+        system(unreg_cmd);
 
         if ( platform_hal_PandMDBInit() == 0)
         {
@@ -149,7 +189,7 @@ int main()
 
 	if ( platform_hal_GetModelName(modelName) == 0)
 	{
-		LogInfo("modelName returned from hal::%s\n", modelName);
+		LogInfo("modelName returned from hal:%s\n", modelName);
 	}
         else 
         {
@@ -266,13 +306,13 @@ int main()
 	} 		
 	 
 	 LogInfo("Framing command for parodus\n");
-
+	//Enabling parodus by forcing to ipv4 
 #ifdef ENABLE_SESHAT
 	snprintf(command, sizeof(command),
-	"/usr/bin/parodus --hw-model=%s --hw-serial-number=%s --hw-manufacturer=%s --hw-last-reboot-reason=%s --fw-name=%s --boot-time=%lu --hw-mac=%s --webpa-ping-time=180 --webpa-interface-used=erouter0 --webpa-url=%s --webpa-backoff-max=9 --parodus-local-url=%s --partner-id=comcast --ssl-cert-path=%s --seshat-url=%s --webpa-token=%s", modelName, serialNumber, manufacturer, lastRebootReason, firmwareVersion, bootTime, deviceMac, webpaUrl, ((NULL != parodus_url) ? parodus_url : PARODUS_UPSTREAM), SSL_CERT_BUNDLE, seshat_url, WEBPA_TOKEN_APPLICATION);
+	"/usr/bin/parodus --hw-model=%s --hw-serial-number=%s --hw-manufacturer=%s --hw-last-reboot-reason=%s --fw-name=%s --boot-time=%lu --hw-mac=%s --webpa-ping-time=180 --webpa-interface-used=erouter0 --webpa-url=%s --webpa-backoff-max=9 --parodus-local-url=%s --partner-id=comcast --ssl-cert-path=%s --seshat-url=%s --webpa-token=%s --force-ipv4 &", modelName, serialNumber, manufacturer, lastRebootReason, firmwareVersion, bootTime, deviceMac, webpaUrl, ((NULL != parodus_url) ? parodus_url : PARODUS_UPSTREAM), SSL_CERT_BUNDLE, seshat_url, WEBPA_TOKEN_APPLICATION);
 #else
         snprintf(command, sizeof(command),
-	"/usr/bin/parodus --hw-model=%s --hw-serial-number=%s --hw-manufacturer=%s --hw-last-reboot-reason=%s --fw-name=%s --boot-time=%lu --hw-mac=%s --webpa-ping-time=180 --webpa-interface-used=erouter0 --webpa-url=%s --webpa-backoff-max=9 --parodus-local-url=%s --partner-id=comcast --ssl-cert-path=%s --webpa-token=%s", modelName, serialNumber, manufacturer, lastRebootReason, firmwareVersion, bootTime, deviceMac, webpaUrl, ((NULL != parodus_url) ? parodus_url : PARODUS_UPSTREAM), SSL_CERT_BUNDLE, WEBPA_TOKEN_APPLICATION);
+	"/usr/bin/parodus --hw-model=%s --hw-serial-number=%s --hw-manufacturer=%s --hw-last-reboot-reason=%s --fw-name=%s --boot-time=%lu --hw-mac=%s --webpa-ping-time=180 --webpa-interface-used=erouter0 --webpa-url=%s --webpa-backoff-max=9 --parodus-local-url=%s --partner-id=comcast --ssl-cert-path=%s --webpa-token=%s --force-ipv4 &", modelName, serialNumber, manufacturer, lastRebootReason, firmwareVersion, bootTime, deviceMac, webpaUrl, ((NULL != parodus_url) ? parodus_url : PARODUS_UPSTREAM), SSL_CERT_BUNDLE, WEBPA_TOKEN_APPLICATION);
 #endif
 
 	LogInfo("parodus command formed is: %s\n", command);
@@ -316,6 +356,14 @@ int main()
 			free(psmValues[i]);
 		}
 	}
+
+	
+	LogInfo("Starting parodus process ..\n");
+	system(command);
+
+	
+    	if (NULL != g_fArmConsoleLog)
+		fclose(g_fArmConsoleLog);
 	return 0;
 }
 
@@ -431,8 +479,16 @@ static void _START_LOG(int level, const char *msg, ...)
 	else
 	{
 	    buf[nbytes] = '\0';
-	} 	
-	printf("%s : [mod=%s, lvl=%s] %s", curtime, MODULE, _level[level], buf);
+	}
+	if (NULL != g_fArmConsoleLog)
+	{ 	
+		fprintf(stderr, "%s : [mod=%s, lvl=%s] %s", curtime, MODULE, _level[level], buf);
+	}	
+	else
+	{
+		fprintf(stdout, "%s : [mod=%s, lvl=%s] %s", curtime, MODULE, _level[level], buf);
+	}	
+	
 }
 
 void getValueFromCfgJson( char *key, char **value, cJSON **out)
@@ -758,3 +814,42 @@ static void free_sync_db_items(int paramCount, char *psmValues[], char *sysCfgVa
 	}
 
 }
+
+
+static void get_parodusStart_logFile(char *parodusStart_Log)
+{
+
+	FILE *fp = fopen(DEVICE_PROPS_FILE, "r");
+	
+	if (NULL != fp)
+	{
+		char str[255] = {'\0'};
+		while(fscanf(fp,"%s", str) != EOF)
+		{
+		    char *value = NULL;
+		    
+		    if(value = strstr(str, "PARODUS_START_LOG_FILE="))
+		    {
+			value = value + strlen("PARODUS_START_LOG_FILE=");
+			strncpy(parodusStart_Log, value, (strlen(str) - strlen("PARODUS_START_LOG_FILE="))+1);
+		    }
+		    
+		}
+		fclose(fp);
+	}
+	else
+	{
+		LogError("Failed to open device.properties file:%s\n", DEVICE_PROPS_FILE);
+	}
+	
+	if (0 == parodusStart_Log[0])
+	{
+		LogError("PARODUS_START_LOG_FILE is not present in device.properties \n");
+	}	
+	else
+	{
+		LogInfo("PARODUS_START_LOG_FILE is %s\n", parodusStart_Log);	
+	}	
+ 
+ }
+ 
