@@ -690,7 +690,7 @@ static int syncXpcParamsOnUpgrade(char *lastRebootReason, char *firmwareVersion)
 	
 	/* To check if it is an upgrade from release image to parodus ON */
 	
-	if((strcmp(lastRebootReason,"Software_upgrade")==0 || ((strlen(cfgJson_firmware)>0) && (strcmp(firmwareVersion, cfgJson_firmware))!=0)) && (atoi(psmValues[0]) ==0 && strcmp(psmValues[1], "0")==0 && strcmp(psmValues[2] ,"0")==0))
+	if((strcmp(lastRebootReason,"Software_upgrade")==0 || ((cfgJson_firmware != NULL) && (strlen(cfgJson_firmware)>0) && (strcmp(firmwareVersion, cfgJson_firmware))!=0)) && ((psmValues[0] != NULL && atoi(psmValues[0]) ==0) && (psmValues[1] != NULL && strcmp(psmValues[1], "0")==0) && (psmValues[2] != NULL && strcmp(psmValues[2] ,"0")==0)))
 	{
 		LogInfo("sync for bbhm and syscfg is required. Proceeding with DB sync..\n");
 		getValuesFromSysCfgDb(paramList, sysCfgValues, paramCount);
