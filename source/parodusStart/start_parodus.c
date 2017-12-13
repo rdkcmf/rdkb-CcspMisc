@@ -162,13 +162,13 @@ int main(int argc, char *argv[])
 	char *paramList[] = {"X_COMCAST-COM_CMC","X_COMCAST-COM_CID","X_COMCAST-COM_SyncProtocolVersion"};
 	int paramCount = 0, i = 0;
 	char *psmValues[MAX_VALUE_SIZE] = {'\0'};
-	
+#if defined (START_PARODUS) && defined (UPDATE_CONFIG_FILE)
 	LogInfo("Proceeding to unregister wan-status event\n");
 
         snprintf(unreg_cmd,sizeof(unreg_cmd),"/etc/utopia/registration.d/02_parodus stop");
         LogInfo("unreg_cmd is %s\n", unreg_cmd);
         system(unreg_cmd);
-
+#endif
         if ( platform_hal_PandMDBInit() == 0)
         {
                 LogInfo("PandMDB initiated successfully\n");
@@ -357,10 +357,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	
+#ifdef START_PARODUS
 	LogInfo("Starting parodus process ..\n");
 	system(command);
-
+#endif
 	
     	if (NULL != g_fArmConsoleLog)
 		fclose(g_fArmConsoleLog);
@@ -700,6 +700,7 @@ static int syncXpcParamsOnUpgrade(char *lastRebootReason, char *firmwareVersion)
 	if(out != NULL)
 	{
 		LogInfo("cfgJson_firmware fetched from webpa_cfg.json is %s\n", cfgJson_firmware);
+#ifdef UPDATE_CONFIG_FILE
 		cJSON_ReplaceItemInObject(out, WEBPA_CFG_FIRMWARE_VER, cJSON_CreateString(firmwareVersion));
 		
 		cJsonOut = cJSON_Print(out);
@@ -719,7 +720,7 @@ static int syncXpcParamsOnUpgrade(char *lastRebootReason, char *firmwareVersion)
 			free(cJsonOut);
 			cJsonOut = NULL;
 		}
-
+#endif
 		cJSON_Delete(out);
 	}
 
