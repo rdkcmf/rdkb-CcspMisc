@@ -751,6 +751,13 @@ static int syncXpcParamsOnUpgrade(char *lastRebootReason, char *firmwareVersion)
 	{
 		LogInfo("sync for bbhm and syscfg is required. Proceeding with DB sync..\n");
 		getValuesFromSysCfgDb(paramList, sysCfgValues, paramCount);
+		
+		if(cfgJson_firmware != NULL)
+		{
+			free(cfgJson_firmware);
+			cfgJson_firmware = NULL;
+		}
+		
 		for(i=0; i<paramCount; i++)
 		{
 			if(sysCfgValues[i] == NULL)
@@ -769,26 +776,23 @@ static int syncXpcParamsOnUpgrade(char *lastRebootReason, char *firmwareVersion)
 		if(status == 0)
 		{
 		        LogInfo("Successfully set values to PSM DB\n");
-    	}
-    	else
-    	{
+    		}
+    		else
+    		{
     			LogError("Failed to set values to PSM DB\n");
     			free_sync_db_items(paramCount, psmValues, sysCfgValues);
     			return -2;
-    	}
-	
-		if(cfgJson_firmware != NULL)
-		{
-			free(cfgJson_firmware);
-			cfgJson_firmware = NULL;
-		}
-
-    		
+    		}
 	}
 	else
 	{
 		LogInfo("Sync for bbhm and syscfg is not required\n");
 		free_sync_db_items(paramCount, psmValues, sysCfgValues);
+		if(cfgJson_firmware != NULL)
+		{
+			free(cfgJson_firmware);
+			cfgJson_firmware = NULL;
+		}
 		return -1;
 	}
 		
@@ -853,4 +857,4 @@ static void get_parodusStart_logFile(char *parodusStart_Log)
 	}	
  
  }
- 
+
