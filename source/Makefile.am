@@ -23,9 +23,5 @@ endif
 endif
 
 
-if PARODUS_ENABLE
-PARODUS_OPT = parodusStart
-endif
-
-SUBDIRS = Psmcli parcon LTime print_uptime $(NOTIFY) $(PARODUS_OPT)
+SUBDIRS = Psmcli parcon LTime print_uptime $(NOTIFY) 
 
