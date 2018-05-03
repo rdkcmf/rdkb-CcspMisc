@@ -23,5 +23,5 @@ endif
 endif
 
 
-SUBDIRS = Psmcli parcon LTime print_uptime $(NOTIFY) 
+SUBDIRS = Psmcli parcon LTime print_uptime
 
