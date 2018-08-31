@@ -32,12 +32,24 @@
 time_t getOffset()
 {
     time_t off;
-    char a[100];
+    char a[100];char cmd[100];
     char *pTimeOffset = a;
+    FILE *fp;
 
 #ifdef UTC_ENABLE
+    if(!access("/nvram/ETHWAN_ENABLE", 0))
+    {
+	snprintf(cmd,sizeof(cmd),"sysevent get ipv4-timeoffset");
+	fp = popen(cmd, "r");
+	fgets(a,sizeof(a),fp);
+        pclose(fp);
+        off = atoi(a + 1);
+    }
+    else
+    {
     platform_hal_getTimeOffSet(pTimeOffset);
     off = atoi(pTimeOffset);
+    }
 #endif
     return off;
 }
