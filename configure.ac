@@ -70,6 +70,11 @@ AC_ARG_ENABLE([notifylease],
 esac],[NOTIFYLEASE_ENABLE=false])
 AM_CONDITIONAL([NOTIFYLEASE_ENABLE], [test x$NOTIFYLEASE_ENABLE = xtrue])
 
+AC_ARG_ENABLE([setLED],
+ [AS_HELP_STRING([--enable-setLED], [Turn on setLED])], ,
+ [setled_enable=true])
+AM_CONDITIONAL([SETLED_ENABLE], [test x$setled_enable = xtrue])
+
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -100,6 +105,8 @@ AC_CONFIG_FILES(
 
 AM_COND_IF([NOTIFYLEASE_ENABLE], [AM_COND_IF([CCSP_ARCH_ARM],
            [AC_CONFIG_FILES([source/Notify_Lease/Makefile])])], [])
+
+AM_COND_IF([SETLED_ENABLE], [AC_CONFIG_FILES([source/SetLED/Makefile])])
 
 AC_OUTPUT
 
