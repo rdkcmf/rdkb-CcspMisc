@@ -99,6 +99,7 @@ AC_CONFIG_FILES(
 	source/LTime/Makefile
 	source/parcon/Makefile
     source/print_uptime/Makefile
+    	source/MemFrag_Calc/Makefile
 	source/Makefile
 	Makefile
 )

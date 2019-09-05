@@ -16,15 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-if CCSP_ARCH_ARM
-if NOTIFYLEASE_ENABLE
-NOTIFY = Notify_Lease
-endif
-endif
+bin_PROGRAMS = MemFrag_Calc
 
-if SETLED_ENABLE
-SETLED = SetLED
-endif
-
-SUBDIRS = Psmcli parcon LTime print_uptime MemFrag_Calc $(SETLED)
-
+MemFrag_Calc_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/source/include -I$(top_srcdir)/source/util/utils $(DBUS_CFLAGS)
+MemFrag_Calc_SOURCES = MemFragCalc.c
