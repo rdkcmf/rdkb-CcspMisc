@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define PART_COLUMN 8
 #define COLUMN 11
 
 /*Calculate Total Free Pages  for each column*/
@@ -35,6 +36,7 @@ int main(int argc ,char **argv)
 	int i=0, j=0;	
 	int Fragmentation = 0;
 	int avarageFragmentation = 0;
+	int overallFragmentation = 0;
 	unsigned long llTotalFreePages=0;
 
 	unsigned long llaFragValuePerPages[COLUMN] ;
@@ -59,8 +61,14 @@ int main(int argc ,char **argv)
 	for(i=0 ;i<COLUMN ; i++)
 		sum += (llaTotalFragPerPages[i] );
 
-	avarageFragmentation = sum / COLUMN;
-	printf("%d\n",avarageFragmentation);
+	overallFragmentation = sum / COLUMN;
+
+        sum=0;
+	for(i=3 ;i<COLUMN ; i++)
+	        sum += (llaTotalFragPerPages[i] );
+   
+        avarageFragmentation = sum / PART_COLUMN;
+	printf("%d %d\n",overallFragmentation, avarageFragmentation);
 
 return 0;
 }
