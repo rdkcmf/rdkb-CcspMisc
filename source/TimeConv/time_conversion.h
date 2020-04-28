@@ -63,7 +63,6 @@
 #ifndef  _TIME_CONVERSION_H
 #define  _TIME_CONVERSION_H
 time_t getOffset();
-void getLocalTimeStr(char *pTime,char *pDate);
 int ConvLocalToUTC(char* LocalTime, char* UtcTime);
 int ConvUTCToLocal( char* UtcTime, char* LocalTime);
 int split_BlockDays(int sRet, int eRet, char *sBDays, char *eBDays);

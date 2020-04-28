@@ -22,13 +22,22 @@
 #ifdef UTC_ENABLE
 #include "platform_hal.h"
 #endif
+#include "safec_lib_common.h"
+
 #define DATE_MAX_STR_SIZE 26
 //#define DATE_FMT "%FT%TZ%z"
 #define DATE_FMT "%FT%TZ"
 #define DATE_FMT_1 "%R"
 #define DATE_FMT_2 "%F"
 char *offset = "-25200";
+
+#define LOCAL_TIME_SIZE		30
+#define LOCAL_DATE_SIZE		30
+#define UTC_DATE_SIZE		30
+#define DAYS_RULE_SIZE		64
+
 int ConvLocalToUTC(char* LocalTime, char* UtcTime);
+static int getLocalTimeStr(char *pTime, char *pDate);
 
 time_t getOffset()
 {
@@ -53,7 +62,7 @@ time_t getOffset()
 #endif
     return off;
 }
-void getUTCTimeStr(char *pTime,char *pDate)
+static int getUTCTimeStr(char *pTime,char *pDate)
 {
    time_t now_time, now_time_local,off;
    struct tm now_tm_utc, now_tm_local;
@@ -61,18 +70,31 @@ void getUTCTimeStr(char *pTime,char *pDate)
    char str_local[DATE_MAX_STR_SIZE];
    char str_date[DATE_MAX_STR_SIZE];
    char Utc[30];
-    
+   errno_t rc = -1;
+
    time(&now_time);
    localtime_r(&now_time, &now_tm_local);
    /* human readable */
    strftime(str_local, DATE_MAX_STR_SIZE, DATE_FMT, &now_tm_local);
    strftime(str_date, DATE_MAX_STR_SIZE, DATE_FMT, &now_tm_local);
-   strcpy(pTime,str_local);
-   strcpy(pDate,str_date);
+   rc = strcpy_s(pTime, LOCAL_TIME_SIZE, str_local);
+   if( rc != EOK )
+   {
+      ERR_CHK(rc);
+      return( 0 );
+   }
 
+   rc = strcpy_s(pDate, UTC_DATE_SIZE, str_date);
+   if( rc != EOK )
+   {
+      ERR_CHK(rc);
+      return( 0 );
+   }
+
+   return( 1 );
 }
 
-void getLocalTimeStr(char *pTime,char *pDate)
+static int getLocalTimeStr(char *pTime,char *pDate)
 {
    time_t now_time, now_time_local,off;
    struct tm now_tm_utc, now_tm_local;
@@ -80,6 +102,7 @@ void getLocalTimeStr(char *pTime,char *pDate)
    char str_local[DATE_MAX_STR_SIZE];
    char str_date[DATE_MAX_STR_SIZE];
    char Utc[30];
+   errno_t rc = -1;
 
    time(&now_time);
    now_time = now_time + getOffset();
@@ -87,41 +110,139 @@ void getLocalTimeStr(char *pTime,char *pDate)
    /* human readable */
    strftime(str_local, DATE_MAX_STR_SIZE, DATE_FMT, &now_tm_local);
    strftime(str_date, DATE_MAX_STR_SIZE, DATE_FMT_2, &now_tm_local);
-   strcpy(pTime,str_local);
-   strcpy(pDate,str_date);
+   rc = strcpy_s(pTime, LOCAL_TIME_SIZE, str_local);
+   if( rc != EOK )
+   {
+      ERR_CHK(rc);
+      return( 0 );
+   }
+   rc = strcpy_s(pDate, LOCAL_DATE_SIZE, str_date);
+   if( rc != EOK )
+   {
+      ERR_CHK(rc);
+      return( 0 );
+   }
+
+   return( 1 );
 }
 int ConvLocalToUTC(char* LocalTime, char* UtcTime)
 {
-    char LTime[30];
-    char TmpTime[30];
+    char LTime[LOCAL_TIME_SIZE] = { 0 };
+    char TmpTime[30] = { 0 };
     int len = 0;
-	char LDate[30];
-	char UtcDate[30];
-    int ret = 0;
+	char LDate[LOCAL_DATE_SIZE] = { 0 };
+	char UtcDate[UTC_DATE_SIZE] = { 0 };
+	errno_t rc = -1;
+	int ind = -1;
+	int result = 0;
     /* LOCAL: 2016-09-30T12:34:11Z
    */
     struct tm cal = {};
     struct tm now_tm_utc;
-    memset(LTime, 0, sizeof(LTime));
-    memset(TmpTime, 0, sizeof(TmpTime));
-    memset(LDate, 0, sizeof(LDate));
-    memset(UtcDate, 0, sizeof(UtcDate));
+
     len = validateTime(LocalTime);
-    getLocalTimeStr(LTime,LDate);
-    strncpy(TmpTime,LTime,11);
+    result = getLocalTimeStr(LTime,LDate);
+    if( result == 0 )
+    {
+		/* This function returns the result of strcmp() values.
+		 * But for safec changes, we modified to return the error codes,
+		 * when there is any failure in the safec string functions.
+		 *
+		 * Since the caller of this api is in different component,
+		 * We need to sync with them and modify this api prototype,
+		 * For returning the proper return types.
+		 */
+        return(-1);
+    }
+
+    rc = strcpy_s(TmpTime, sizeof(TmpTime), LTime);
+	if( rc != EOK )
+	{
+		ERR_CHK(rc);
+
+		/* This function returns the result of strcmp() values.
+		 * But for safec changes, we modified to return the error codes,
+		 * when there is any failure in the safec string functions.
+		 *
+		 * Since the caller of this api is in different component,
+		 * We need to sync with them and modify this api prototype,
+		 * For returning the proper return types.
+		 */
+		return(-1);
+	}
+
     if(len == 4)
     {
-        strncat(TmpTime,"0",1);
+        rc = strncat_s(TmpTime, sizeof(TmpTime), "0", 1);
+		if( rc != EOK )
+		{
+		   ERR_CHK(rc);
+
+		   /* This function returns the result of strcmp() values.
+		    * But for safec changes, we modified to return the error codes,
+		    * when there is any failure in the safec string functions.
+		    *
+		    * Since the caller of this api is in different component,
+		    * We need to sync with them and modify this api prototype,
+		    * For returning the proper return types.
+		    */
+		   return(-1);
+		}
+
         len++;
     }
-    strncat(TmpTime, LocalTime, 11);
+    rc = strncat_s(TmpTime, sizeof(TmpTime), LocalTime, strlen(LocalTime));
+	if( rc != EOK )
+	{
+		ERR_CHK(rc);
+
+		/* This function returns the result of strcmp() values.
+		 * But for safec changes, we modified to return the error codes,
+		 * when there is any failure in the safec string functions.
+		 *
+		 * Since the caller of this api is in different component,
+		 * We need to sync with them and modify this api prototype,
+		 * For returning the proper return types.
+		 */
+		return(-1);
+	}
 
     if(len == 5)
         {
-            strncat(TmpTime, ":00Z", 4);
+            rc = strncat_s(TmpTime, sizeof(TmpTime), ":00Z", 4);
+			if( rc != EOK )
+			{
+			   ERR_CHK(rc);
+
+			   /* This function returns the result of strcmp() values.
+			    * But for safec changes, we modified to return the error codes,
+			    * when there is any failure in the safec string functions.
+			    *
+			    * Since the caller of this api is in different component,
+			    * We need to sync with them and modify this api prototype,
+			    * For returning the proper return types.
+			    */
+			   return(-1);
+			}
         }
     else
-    strncat(TmpTime, "Z", 1);
+    {
+	   rc = strncat_s(TmpTime, sizeof(TmpTime), "Z", 1);
+	   if( rc != EOK )
+	   {
+		   ERR_CHK(rc);
+
+		   /* This function returns the result of strcmp() values.
+		    * But for safec changes, we modified to return the error codes,
+		    * when there is any failure in the safec string functions.
+		    *
+		    * Since the caller of this api is in different component,
+		    * We need to sync with them and modify this api prototype,
+		    * For returning the proper return types.
+		    */
+		   return(-1);
+	   }
+    }
 
     strptime(TmpTime, DATE_FMT, &cal);
    // Tell mktime to figure out the daylight saving time
@@ -137,9 +258,11 @@ int ConvLocalToUTC(char* LocalTime, char* UtcTime)
    	printf("\nUTC Date: %s\n", UtcDate);
 	printf("\nLocal Date: %s\n", LDate);
 
-	ret = strcmp(UtcDate,LDate);
-	printf("\n cmp = %d \n",ret);
-	return ret;
+	rc = strcmp_s( UtcDate, strlen(UtcDate), LDate, &ind);
+	ERR_CHK(rc);
+
+	printf("\n cmp = %d \n", ind);
+	return ind;
 }
 int validateTime(char *pTime)
 {
@@ -161,39 +284,124 @@ int validateTime(char *pTime)
 
 int ConvUTCToLocal( char* UtcTime, char* LocalTime)
 {
-    char LTime[30];
-	char LDate[30];
-    char TmpTime[30];
-	char UtcDate[30];
+    char LTime[LOCAL_TIME_SIZE] = { 0 };
+	char LDate[LOCAL_DATE_SIZE] = { 0 };
+    char TmpTime[30] = { 0 };
+	char UtcDate[UTC_DATE_SIZE] = { 0 };
     int  len = 0;
-    int  ret = 0;
-    memset(LTime,0,30);
-    memset(TmpTime,0,30);
-	memset(LDate,0,30);
-    memset(UtcDate,0,30);
+	errno_t rc = -1;
+	int ind = -1;
+	int result = 0;
+
     /* LOCAL: 2016-09-30T12:34:11Z
    */
     struct tm cal = {};
     struct tm now_tm_utc;
     len = validateTime(UtcTime);
     //getLocalTimeStr(LTime);
-    getUTCTimeStr(LTime,UtcDate);
+    result = getUTCTimeStr(LTime,UtcDate);
+    if( result == 0 )
+    {
+        /* This function returns the result of strcmp() values.
+         * But for safec changes, we modified to return the error codes,
+         * when there is any failure in the safec string functions.
+         *
+         * Since the caller of this api is in different component,
+         * We need to sync with them and modify this api prototype,
+         * For returning the proper return types.
+         */
+        return(-1);
+    }
 
-    strncpy(TmpTime,LTime,11);
+    rc = strcpy_s(TmpTime, sizeof(TmpTime), LTime);
+    if( rc != EOK )
+    {
+        ERR_CHK(rc);
 
-    strncat(TmpTime, UtcTime, 11);
+        /* This function returns the result of strcmp() values.
+         * But for safec changes, we modified to return the error codes,
+         * when there is any failure in the safec string functions.
+         *
+         * Since the caller of this api is in different component,
+         * We need to sync with them and modify this api prototype,
+         * For returning the proper return types.
+         */
+        return(-1);
+    }
+
+    rc = strncat_s(TmpTime, sizeof(TmpTime), UtcTime, strlen(UtcTime));
+    if( rc != EOK )
+    {
+        ERR_CHK(rc);
+
+        /* This function returns the result of strcmp() values.
+         * But for safec changes, we modified to return the error codes,
+         * when there is any failure in the safec string functions.
+         *
+         * Since the caller of this api is in different component,
+         * We need to sync with them and modify this api prototype,
+         * For returning the proper return types.
+         */
+        return(-1);
+    }
     if(len == 4)
     {
-        strncat(TmpTime,"0",1);
+        rc = strncat_s(TmpTime, sizeof(TmpTime), "0",1);
+        if( rc != EOK )
+        {
+           ERR_CHK(rc);
+
+           /* This function returns the result of strcmp() values.
+            * But for safec changes, we modified to return the error codes,
+            * when there is any failure in the safec string functions.
+            *
+            * Since the caller of this api is in different component,
+            * We need to sync with them and modify this api prototype,
+            * For returning the proper return types.
+            */
+           return(-1);
+        }
+
         len++;
     }
 
     if(len == 5)
 	{
-	    strncat(TmpTime, ":00Z", 4);
+	    rc = strncat_s(TmpTime, sizeof(TmpTime), ":00Z", 4);
+		if( rc != EOK )
+        {
+           ERR_CHK(rc);
+
+           /* This function returns the result of strcmp() values.
+            * But for safec changes, we modified to return the error codes,
+            * when there is any failure in the safec string functions.
+            *
+            * Since the caller of this api is in different component,
+            * We need to sync with them and modify this api prototype,
+            * For returning the proper return types.
+            */
+           return(-1);
+        }
 	}
     else
-    strncat(TmpTime, "Z", 1);
+    {
+       rc = strncat_s(TmpTime, sizeof(TmpTime), "Z", 1);
+	    if( rc != EOK )
+        {
+           ERR_CHK(rc);
+
+           /* This function returns the result of strcmp() values.
+            * But for safec changes, we modified to return the error codes,
+            * when there is any failure in the safec string functions.
+            *
+            * Since the caller of this api is in different component,
+            * We need to sync with them and modify this api prototype,
+            * For returning the proper return types.
+            */
+           return(-1);
+        }
+	   
+    }
 
 
    // Read string into struct tm
@@ -207,31 +415,53 @@ int ConvUTCToLocal( char* UtcTime, char* LocalTime)
    /* human readable */
     strftime(LocalTime, DATE_MAX_STR_SIZE, DATE_FMT_1, &now_tm_utc);
     strftime(LDate, DATE_MAX_STR_SIZE, DATE_FMT_2, &now_tm_utc);
-   	ret = strcmp(LDate,UtcDate);
+
+	rc = strcmp_s( LDate, strlen(LDate), UtcDate, &ind);
+	ERR_CHK(rc);
+
 	printf("\nUTC Date: %s\n", UtcDate);
 	printf("\nLocal Date: %s\n", LDate);
-    printf("\n cmp = %d \n",ret); 
-    return ret;
+    printf("\n cmp = %d \n", ind); 
+
+    return ind;
 }
 char *str[] = {"Mon","Tue","Wed","Thu","Fri","Sat","Sun"};
 
-void pick_days(char *days_rule,int *Days_Mod)
+static int pick_days(char *days_rule,int *Days_Mod)
 {
    int i = 0;
-   char day_str[64];
-   memset(day_str,0,64);
+   char day_str[64] = { 0 };
+   errno_t rc = -1;
+
    for(i = 0;i<7;i++)
    {
        if(Days_Mod[i] == 1)
 	   {
-           strcat(day_str,str[i]);
-           strcat(day_str,",");
+           rc = strcat_s(day_str, sizeof(day_str), str[i]);
+           if( rc != EOK )
+           {
+              ERR_CHK(rc);
+              return( 0 );
+           }
+
+           rc = strcat_s(day_str, sizeof(day_str), ",");
+           if( rc != EOK )
+           {
+              ERR_CHK(rc);
+              return( 0 );
+           }
 	   }
    }
    day_str[strlen(day_str)-1] = '\0';
    printf("rules %s\n",day_str);
-   strcpy(days_rule,day_str);
+   rc = strcpy_s(days_rule, DAYS_RULE_SIZE, day_str);
+   if( rc != EOK )
+   {
+      ERR_CHK(rc);
+      return( 0 );
+   }
 
+   return( 1 );
 }
 
 void scan_days(char* days,int *Days)
@@ -318,20 +548,33 @@ int split_BlockDays(int sRet, int eRet, char *sBDays, char *eBDays)
 {
     int Days[7] = {0};
     int Days_Mod[7] = {0};
-    char days[64];
-    char days_rule[64];
+    char days[64] = { 0 };
+    char days_rule[DAYS_RULE_SIZE];
     int i =0;
-	
-    memset(days,0,64);
-    memset(Days,0,7);
-    memset(Days_Mod,0,7);
-    strcpy(days,sBDays);
+    errno_t rc = -1;
+    int result = 0;
+
+	if(( sBDays == NULL ) || ( eBDays == NULL ) )
+		return ( -1 );
+
+    rc = strcpy_s(days, sizeof(days), sBDays);
+    if( rc != EOK )
+    {
+       ERR_CHK(rc);
+       return ( -1 );
+    }
+
 	if(sRet == eRet)
 	{
 		if(sRet == 0)
 		{
 	         printf("No change in both date\n");
-		     strcpy(eBDays,sBDays);
+	         rc = strcpy_s(eBDays, DAYS_RULE_SIZE, sBDays);
+	         if( rc != EOK )
+	         {
+	            ERR_CHK(rc);
+	            return ( -1 );
+	         }
 		}
 		else
 		{
@@ -339,10 +582,26 @@ int split_BlockDays(int sRet, int eRet, char *sBDays, char *eBDays)
 		    printf("day - %s\n",days);
             scan_days(days,Days);
             ModifyDay(sRet,Days_Mod,Days);
-            pick_days(days_rule,Days_Mod);
-            memset(sBDays,0,64);
-		    strcpy(sBDays,days_rule);
-		    strcpy(eBDays,days_rule);
+            result = pick_days(days_rule,Days_Mod);
+			if( result == 0 )
+            {
+               return ( -1 );
+            }
+
+            rc = memset_s(sBDays,DAYS_RULE_SIZE,0,DAYS_RULE_SIZE);
+            ERR_CHK(rc);
+            rc = strcpy_s(sBDays, DAYS_RULE_SIZE, days_rule);
+            if( rc != EOK )
+            {
+               ERR_CHK(rc);
+               return ( -1 );
+            }
+            rc = strcpy_s(eBDays, DAYS_RULE_SIZE, days_rule);
+            if( rc != EOK )
+            {
+               ERR_CHK(rc);
+               return ( -1 );
+            }
 		}
 	return 0;
 	}
@@ -358,9 +617,20 @@ int split_BlockDays(int sRet, int eRet, char *sBDays, char *eBDays)
 			 printf("day - %s\n",days);
              scan_days(days,Days);
              ModifyDay(sRet,Days_Mod,Days);
-             pick_days(days_rule,Days_Mod);
-             memset(sBDays,0,64);
-		     strcpy(sBDays,days_rule);
+             result = pick_days(days_rule,Days_Mod);
+			 if( result == 0 )
+             {
+                return ( -1 );
+             }
+
+             rc = memset_s(sBDays,DAYS_RULE_SIZE,0,DAYS_RULE_SIZE);
+             ERR_CHK(rc);
+             rc = strcpy_s(sBDays, DAYS_RULE_SIZE, days_rule);
+             if( rc != EOK )
+             {
+                ERR_CHK(rc);
+                return ( -1 );
+             }
 		}
 		if(eRet == 0)
 		{
@@ -371,9 +641,20 @@ int split_BlockDays(int sRet, int eRet, char *sBDays, char *eBDays)
 		    printf("change in end date\n");
             scan_days(days,Days);
    			ModifyDay(eRet,Days_Mod,Days);
-            pick_days(days_rule,Days_Mod);
-            memset(eBDays,0,64);
-		    strcpy(eBDays,days_rule);
+            result = pick_days(days_rule,Days_Mod);
+            if( result == 0 )
+            {
+               return ( -1 );
+            }
+
+            rc = memset_s(eBDays,DAYS_RULE_SIZE,0,DAYS_RULE_SIZE);
+            ERR_CHK(rc);
+            rc = strcpy_s(eBDays, DAYS_RULE_SIZE, days_rule);
+            if( rc != EOK )
+            {
+               ERR_CHK(rc);
+               return ( -1 );
+            }
 		}
 	return 1;
 	}

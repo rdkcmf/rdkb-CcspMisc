@@ -22,9 +22,7 @@
 
 
 int main(int argc, char* argv[]) {
-    LEDMGMT_PARAMS ledMgmt;
-
-    memset(&ledMgmt, 0, sizeof(LEDMGMT_PARAMS));
+    LEDMGMT_PARAMS ledMgmt = { 0 };
 
 	if(argc < 3) {
 		printf("Invalid arguments.\n");

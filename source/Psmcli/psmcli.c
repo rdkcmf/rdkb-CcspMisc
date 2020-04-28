@@ -49,6 +49,8 @@
 
 #include "ccsp_trace.h"         // for CcspTraceXYZ
 
+#include "safec_lib_common.h"
+
 // #define PSMCLI_TESTING_LOCAL
 #ifndef PSMCLI_TESTING_LOCAL
     #include "ccsp_base_api.h"      // for definitions of CCSP_INVALID_PSMCLI_CMD and CCSP_MSG_BUS_CFG
@@ -58,6 +60,8 @@
     #define CCSP_MSG_BUS_CFG         "/home/rutian/work/intel_usg/CcspCommonLibrary/boards/pc/ccsp_msg.cfg"
     static char const * const psmcli_debug_file_name    = "./psmcli_debug_level";
 #endif
+
+#define TYPE_STRING_SIZE 16
 
 /* DEBUG FLAG */
 #ifdef _DEBUG
@@ -77,6 +81,29 @@ extern psmcli_debug_level psmcli_debug_print;
 #define PSMCLI_STRLEN_MAX                           256
 #define TYPE_FORMAT_CCSP                            1
 #define TYPE_FORMAT_STRING                          2
+#define NUM_CCSP_TYPES                          ( sizeof(ccsp_type_table) / sizeof(ccsp_type_table[0]) )
+
+/*Structure defined to get the log level type from the given Log Names */
+
+typedef struct ccsp_type_struct {
+  char     *ccspName;
+  unsigned int      ccspType;
+} CCSP_TYPE_STRUCT;
+
+CCSP_TYPE_STRUCT ccsp_type_table[] = {
+	{ "int",			ccsp_int },
+	{ "string",			ccsp_string },
+	{ "uint",			ccsp_unsignedInt },
+	{ "bool",			ccsp_boolean },
+	{ "datetime",		ccsp_dateTime },
+	{ "ccsp_base64",	ccsp_base64 },
+	{ "long",			ccsp_long },
+	{ "ulong",			ccsp_unsignedLong },
+	{ "float",			ccsp_float },
+	{ "double",			ccsp_double },
+	{ "byte",			ccsp_byte }
+};
+
 
 // Help / usage menu. 
 // Do not modify the order, add more items to the end before NULL
@@ -109,7 +136,7 @@ typedef struct CmdsTable {
 static void help_usage();
 static void ccsp_exception_handler(int sig, siginfo_t *info, void *context);
 static void enable_ccsp_exception_handlers();
-static void get_type_info(unsigned int *ccspType, char **typeString, int const typeFormat);
+static unsigned int get_type_info(unsigned int *ccspType, char **typeString, int const typeFormat);
 static psmcli_debug_level psmcli_get_debug_level(char const *file_name);
 // static inline void process_show();
 // static int psmcli_bus_name_in_use(char const *component_id, char  const *config_file); 
@@ -157,6 +184,8 @@ int main(int argc, char**argv)
     int     local_argc                       = argc;
     char    **local_argv                     = argv;
     int     i                                = 0;
+    errno_t rc                               = -1;
+    int     ind                              = -1;
 
     enable_ccsp_exception_handlers();
 
@@ -167,11 +196,29 @@ int main(int argc, char**argv)
 
     // save command line
     for(i=0; i<(argc-1) && (strlen(argv[i])+strlen(cmdLine)+2)<=PSMCLI_STRLEN_MAX; i++) {
-        strcat(cmdLine, argv[i]);
-        strcat(cmdLine, " ");
+        rc = strcat_s(cmdLine, sizeof(cmdLine), argv[i]);
+        if( rc != EOK )
+        {
+           ERR_CHK(rc);
+           exit( 1 );
+        }
+
+        rc = strcat_s(cmdLine, sizeof(cmdLine), " ");
+		if( rc != EOK )
+        {
+           ERR_CHK(rc);
+           exit( 1 );
+        }
     }
-    if(i == argc-1 && (strlen(argv[i])+strlen(cmdLine)+1)<=PSMCLI_STRLEN_MAX)
-        strcat(cmdLine, argv[argc-1]);
+    if(( i == argc-1 ) && (strlen(argv[i])+strlen(cmdLine)+1)<=PSMCLI_STRLEN_MAX)
+    {
+        rc = strcat_s(cmdLine, sizeof(cmdLine), argv[argc-1]);
+        if( rc != EOK )
+        {
+           ERR_CHK(rc);
+           exit( 1 );
+        }
+    }
 
 #ifdef PSMCLI_TESTING_LOCAL
     // Echo input
@@ -183,15 +230,26 @@ int main(int argc, char**argv)
 
         help_usage();
 
-        if((argc == 2) && (!strcmp(argv[1], "help"))) {
-            exit(0);
+        if(argc == 2) {
+			rc = strcmp_s( "help", strlen( "help" ), argv[1], &ind );
+			ERR_CHK(rc);
+			if(( !ind ) && ( rc == EOK ))
+			{
+			   exit(0);
+			}
+			else
+			{
+			   exit(CCSP_ERR_INVALID_ARGUMENTS);
+			}
         } else {
             exit(CCSP_ERR_INVALID_ARGUMENTS);
         }
     }
     
     // try to set the subsystem prefix
-    if (strcmp(argv[1], "nosubsys") == 0)  {
+    rc = strcmp_s( "nosubsys", strlen("nosubsys"), argv[1], &ind );
+    ERR_CHK(rc);
+    if (( ind == 0 ) && ( rc == EOK ))  {
         if(argc < 4) { // must be followed by a cmd
  	    help_usage();
 	    exit(CCSP_ERR_INVALID_ARGUMENTS);
@@ -200,22 +258,37 @@ int main(int argc, char**argv)
         local_argc = argc - 1;
         local_argv = argv + 1;
     }
-    else if (strcmp(argv[1], "subsys") == 0) {
+    else {
+        rc = strcmp_s( "subsys", strlen("subsys"), argv[1], &ind );
+        ERR_CHK(rc);
+        if (( ind == 0 ) && ( rc == EOK ))  {
         if(argc < 5) { // must be followed by a string and then a cmd
  	    help_usage();
 	    exit(CCSP_ERR_INVALID_ARGUMENTS);
         }
         else {
-            strncpy(subsys_prefix, argv[2], 256); // truncate if >256
+            rc = strcpy_s(subsys_prefix, sizeof(subsys_prefix), argv[2]);
+            if( rc != EOK )
+            {
+               ERR_CHK(rc);
+               exit( 1 );
+            }
+
             subsys_prefix[255] = '\0';  // in case it is not terminated
             local_argc = argc - 2;
             local_argv = argv + 2;
         }
-    }
-    else { // no subsys nor nosubsys specified, use default prefix
-        strcpy(subsys_prefix, PSMCLI_SUBSYSTEM_PREFIX_DEFAULT);
-        local_argc = argc;
-        local_argv = argv;
+       }
+       else { // no subsys nor nosubsys specified, use default prefix
+           rc = strcpy_s(subsys_prefix, sizeof(subsys_prefix), PSMCLI_SUBSYSTEM_PREFIX_DEFAULT);
+           if( rc != EOK )
+           {
+              ERR_CHK(rc);
+              exit( 1 );
+           }
+           local_argc = argc;
+           local_argv = argv;
+       }
     }
 
     // try to get an unique name for the connection
@@ -294,8 +367,19 @@ int main(int argc, char**argv)
         
     	// Concatenate command and option
     	if(tmpLen <= (PSMCLI_CMD_LEN_MAX - strlen(" -e"))) {
-            strcpy(cmdConcat, local_argv[1]);
-            strcat(cmdConcat, " -e"); 
+            rc = strcpy_s(cmdConcat, sizeof( cmdConcat ), local_argv[1]);
+            if( rc != EOK )
+            {
+               ERR_CHK(rc);
+               exit( 1 );
+            }
+            rc = strcat_s(cmdConcat, sizeof(cmdConcat), " -e");
+            if( rc != EOK )
+            {
+               ERR_CHK(rc);
+               exit( 1 );
+            }
+
             cmdConcat[PSMCLI_CMD_LEN_MAX-1] = '\0';
             
             i = 0;
@@ -380,10 +464,7 @@ static int is_core_dump_opened(void)
 
         fclose(fp);
 
-        if (strcmp(tok, "0") == 0)
-            return 0;
-        else
-            return 1;
+	return (tok[0] == '0' && tok[1] == '\0') ? 0 : 1;
     }
 
     fclose(fp);
@@ -399,6 +480,7 @@ static void ccsp_exception_handler(int sig, siginfo_t *info, void *context)
     char cmdName[32]      = {0}; 
     time_t rawtime;
     struct tm * timeinfo;
+    errno_t rc = -1;
 
     sprintf( mapsFile, "/proc/%d/maps",    pid );
     sprintf( cmdFile,  "/proc/%d/cmdline", pid );
@@ -454,7 +536,8 @@ static void ccsp_exception_handler(int sig, siginfo_t *info, void *context)
         while( (readBytes = read( fd1, buf, 510 ) ) > 0 )
         {
             fprintf(stderr, "%s", buf);
-            memset(buf, 0, sizeof(buf));
+            rc = memset_s(buf, sizeof(buf), 0, sizeof(buf));
+            ERR_CHK(rc);
         }
 
         close(fd1);
@@ -471,9 +554,8 @@ static void ccsp_exception_handler(int sig, siginfo_t *info, void *context)
 static void enable_ccsp_exception_handlers( )
 {
 
-    struct sigaction sigact;
-    
-    memset( &sigact, 0, sizeof( struct sigaction ) );
+    struct sigaction sigact = { 0 };
+
     sigact.sa_sigaction = ccsp_exception_handler;
     sigact.sa_flags = SA_RESTART | SA_SIGINFO;
     
@@ -532,6 +614,7 @@ static int psmcli_bus_name_in_use(char const *component_id, char const *config_f
     char                     address[256];
     int                      count = 0;
     int                      ret_val = 0;
+    errno_t                      rc = -1;
 
     char const func_name[] = "psmcli_bus_name_in_use";
 
@@ -555,10 +638,18 @@ static int psmcli_bus_name_in_use(char const *component_id, char const *config_f
         return (-1);
     }
 
-    memset(bus_info, 0, sizeof(CCSP_MESSAGE_BUS_INFO));
+    rc = memset_s(bus_info, sizeof(CCSP_MESSAGE_BUS_INFO), 0, sizeof(CCSP_MESSAGE_BUS_INFO));
+    ERR_CHK(rc);
 
     if(component_id) {
-        strncpy(bus_info->component_id, component_id, sizeof(bus_info->component_id));
+        rc = strcpy_s(bus_info->component_id, sizeof(bus_info->component_id), component_id);
+        if( rc != EOK )
+        {
+           ERR_CHK(rc);
+           fclose(fp);
+           return (-1);
+        }
+
         bus_info->component_id[sizeof(bus_info->component_id)-1] = '\0';
     }
     else {
@@ -760,7 +851,12 @@ unsigned int process_getdetail(int const argCnt, char const * const argVars[], c
         
         if (ret == CCSP_SUCCESS) {
             if (psmValue != NULL) {
-                get_type_info(&psmType, &typeStr, TYPE_FORMAT_CCSP);
+                ret = get_type_info(&psmType, &typeStr, TYPE_FORMAT_CCSP);
+                if( ret != CCSP_SUCCESS )
+                {
+                   return ret;
+                }
+
                 if(typeStr != NULL) {
                     printf("%s\n%s\n", typeStr, psmValue);
                     AnscFreeMemory(typeStr);
@@ -923,6 +1019,8 @@ unsigned int process_getdetail_e(int const argCnt, char const * const argVars[],
     char *typeStr = NULL;
     char *typeStrEnv = NULL;
     char const func_name[] = "process_getdetail_e";
+    errno_t rc = -1;
+    int mem_alloc_size = 0;
 
     if ((cmd_cnt % 2) != 0) {
     	CcspTraceWarning(("<%s>[%s]: arg count = %d is not even, returning %d CCSP_ERR_INVALID_ARGUMENTS\n", 
@@ -945,12 +1043,33 @@ unsigned int process_getdetail_e(int const argCnt, char const * const argVars[],
         
         if (ret == CCSP_SUCCESS) {
             if (psmValue != NULL) {
-                get_type_info(&psmType, &typeStr, TYPE_FORMAT_CCSP);
-                typeStrEnv = AnscAllocateMemory(strlen(argVars[cmd_index]) + 
-                                                strlen("_TYPE") + 1);
+                ret = get_type_info(&psmType, &typeStr, TYPE_FORMAT_CCSP);
+                if( ret != CCSP_SUCCESS )
+                {
+                   return ret;
+                }
+
+                mem_alloc_size = strlen(argVars[cmd_index]) + strlen("_TYPE") + 1;
+                typeStrEnv = AnscAllocateMemory(mem_alloc_size);
+                if ( typeStrEnv == NULL )
+                {
+                   return CCSP_ERR_MEMORY_ALLOC_FAIL;
+                }
                 
-                strncpy(typeStrEnv, argVars[cmd_index], strlen(argVars[cmd_index])+1);
-                strcat(typeStrEnv, "_TYPE");
+                rc = strcpy_s(typeStrEnv, mem_alloc_size, argVars[cmd_index]);
+                if( rc != EOK )
+                {
+                   ERR_CHK(rc);
+                   return CCSP_FAILURE;
+                }
+
+                rc = strcat_s(typeStrEnv, mem_alloc_size, "_TYPE");
+                if( rc != EOK )
+                {
+                   ERR_CHK(rc);
+                   return CCSP_FAILURE;
+                }
+
                 printf("%s=\"%s\"\n",typeStrEnv, typeStr);
                 printf("%s=\"%s\"\n",argVars[cmd_index], psmValue);
                 AnscFreeMemory(typeStrEnv);
@@ -1089,6 +1208,7 @@ unsigned int process_setdetail(int const argCnt, char const * const argVars[], c
     unsigned int psmType = ccsp_string;
     char *typeStr = NULL;
     char const func_name[] = "process_setdetail";
+    errno_t rc = -1;
 
     if ((cmd_cnt % 3) != 0) {
     	CcspTraceWarning(("<%s>[%s]: arg count = %d is not a multiple of 3, returning %d CCSP_ERR_INVALID_ARGUMENTS\n", 
@@ -1100,7 +1220,12 @@ unsigned int process_setdetail(int const argCnt, char const * const argVars[], c
     cmd_cnt = cmd_cnt/3;
     while(cmd_cnt--) {
         
-    	get_type_info(&psmType, (char**)&argVars[cmd_index], TYPE_FORMAT_STRING);
+    	ret = get_type_info(&psmType, (char**)&argVars[cmd_index], TYPE_FORMAT_STRING);
+    	if( ret != CCSP_SUCCESS )
+    	{
+    	   return ret;
+    	}
+
     	if(psmType != ccsp_none) {
             
             ret = 0;
@@ -1255,94 +1380,95 @@ unsigned int process_getinstcnt(int const argCnt, char const * const argVars[], 
     return func_ret;
 }
 
+static unsigned int ccspType_from_Name( char *name, unsigned int *ccspType )
+{
+	errno_t rc = -1;
+	int ind = -1;
+	int i;
+
+	if(( name == NULL ) || ( ccspType == NULL ))
+		return CCSP_FAILURE;
+
+	for( i=0; i<NUM_CCSP_TYPES; i++ )
+	{
+	   rc = strcmp_s( name, strlen(name), ccsp_type_table[i].ccspName, &ind );
+	   ERR_CHK(rc);
+
+	   if(( ind == 0 ) && ( rc == EOK ))
+	   {
+	      *ccspType = ccsp_type_table[i].ccspType;
+		  return CCSP_SUCCESS;
+	   }
+	}
+
+	// Unrecognized type
+	*ccspType = ccsp_none;
+
+	return CCSP_SUCCESS;
+}
+
+static unsigned int typeString_from_ccspType( unsigned int ccspType, char *typeString )
+{
+	errno_t rc = -1;
+	int i;
+
+	if( typeString == NULL )
+		return CCSP_FAILURE;
+
+	for( i=0; i<NUM_CCSP_TYPES; i++ )
+	{
+	   if( ccsp_type_table[i].ccspType == ccspType )
+	   {
+	      rc = strcpy_s(typeString, TYPE_STRING_SIZE, ccsp_type_table[i].ccspName);
+	      if( rc != EOK )
+	      {
+	         ERR_CHK( rc );
+	         return CCSP_FAILURE;
+	      }
+
+	      return CCSP_SUCCESS;
+	   }
+	}
+
+	rc = strcpy_s(typeString, TYPE_STRING_SIZE, "unknown");
+	if( rc != EOK )
+	{
+	   ERR_CHK( rc );
+	   return CCSP_FAILURE;
+	}
+
+	return CCSP_SUCCESS;
+}
+
 
 // Function: get_type_info
 // Convert from ccsp type to string version or vice-versa
-static void get_type_info(unsigned int *ccspType, char **typeString, int const typeFormat) {
+static unsigned int get_type_info(unsigned int *ccspType, char **typeString, int const typeFormat) {
 
     char const func_name[] = "get_type_info";
+	errno_t rc = -1;
+	unsigned int ret = CCSP_SUCCESS;
 
     if(typeFormat == TYPE_FORMAT_CCSP)
     {
-        *typeString = (char*)AnscAllocateMemory(16);
-        
-        switch(*ccspType) {
-            
-        case ccsp_int:
-            strncpy(*typeString, "int", strlen("int")+1);
-            break;
-            
-        case ccsp_string:
-            strncpy(*typeString, "string", strlen("string")+1);
-            break;
-            
-        case ccsp_unsignedInt:
-            strncpy(*typeString, "uint", strlen("uint")+1);
-            break;
-            
-        case ccsp_boolean:
-            strncpy(*typeString, "bool", strlen("bool")+1);
-            break;
-            
-        case ccsp_dateTime:
-            strncpy(*typeString, "datetime", strlen("datetime")+1);
-            break;
-            
-        case ccsp_base64:
-            strncpy(*typeString, "ccsp_base64", strlen("ccsp_base64")+1);
-            break;
-            
-        case ccsp_long:
-            strncpy(*typeString, "long", strlen("long")+1);
-            break;
-            
-        case ccsp_unsignedLong:
-            strncpy(*typeString, "ulong", strlen("ulong")+1);
-            break;
-            
-        case ccsp_float:
-            strncpy(*typeString, "float", strlen("float")+1);
-            break;
-            
-        case ccsp_double:
-            strncpy(*typeString, "double", strlen("double")+1);
-            break;
-            
-        case ccsp_byte:
-            strncpy(*typeString, "byte", strlen("byte")+1);
-            break;
-            
-        default:
-            strncpy(*typeString, "unknown", strlen("unknown")+1);
-            break;
-            
+        *typeString = (char*)AnscAllocateMemory(TYPE_STRING_SIZE);
+        if( *typeString == NULL )
+        {
+           return CCSP_ERR_MEMORY_ALLOC_FAIL;
         }
-    } else {
-        if(!strcmp(*typeString, "int")) {
-            *ccspType = ccsp_int;
-        } else if (!strcmp(*typeString, "string")) {
-            *ccspType = ccsp_string;
-        } else if (!strcmp(*typeString, "uint")) {
-            *ccspType = ccsp_unsignedInt;
-        } else if (!strcmp(*typeString, "bool")) {
-            *ccspType = ccsp_boolean;
-        } else if (!strcmp(*typeString, "datetime")) {
-            *ccspType = ccsp_dateTime;
-        } else if (!strcmp(*typeString, "ccsp_base64")) {
-            *ccspType = ccsp_base64;
-        } else if (!strcmp(*typeString, "long")) {
-            *ccspType = ccsp_long;
-        } else if (!strcmp(*typeString, "ulong")) {
-            *ccspType = ccsp_unsignedLong;
-        } else if (!strcmp(*typeString, "float")) {
-            *ccspType = ccsp_float;
-        } else if (!strcmp(*typeString, "double")) {
-            *ccspType = ccsp_double;
-        } else if (!strcmp(*typeString, "byte")) {
-            *ccspType = ccsp_byte;
-        } else {
-            // Unrecognized type
-            *ccspType = ccsp_none;
+
+        ret = typeString_from_ccspType( *ccspType, *typeString );
+        if( ret != CCSP_SUCCESS )
+        {
+           free( *typeString );
+           return ret;
         }
     }
+    else
+    {
+       ret = ccspType_from_Name( *typeString, ccspType );
+       return ret;
+    }
+
+	return CCSP_SUCCESS;
 }
