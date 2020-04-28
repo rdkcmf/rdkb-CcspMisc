@@ -19,6 +19,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/file.h>
+#include "safec_lib_common.h"
+
 #define PCMD_LIST "/tmp/.pcmd"
 #define LOG_FILE "/rdklogs/logs/Parcon.txt"
 #define TRUE 1
@@ -39,6 +41,8 @@ int validate_mac(char * physAddress)
 
 int main( int argc, char *argv[] )  {
 int count = 1;
+errno_t rc		= -1;
+
    printf("argc = %d\n",argc);
    FILE * fp;
    char errbuf[100] = {0};
@@ -62,7 +66,8 @@ int count = 1;
 		}
 		else
 		{
-		    memset(errbuf, 0, sizeof(errbuf));
+		    rc = memset_s(errbuf,sizeof(errbuf), 0, sizeof(errbuf));
+		    ERR_CHK(rc);
 		    sprintf(errbuf,"echo Error: Invalid input Mac address %s >> " LOG_FILE,argv[count] );
 		    system(errbuf);
 		}

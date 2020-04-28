@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "safec_lib_common.h"
 
 #define PART_COLUMN 8
 #define COLUMN 11
@@ -18,16 +19,16 @@ unsigned long TotalFreePages(int index ,int buf[] ,unsigned long llapowerof2[])
 
 int main(int argc ,char **argv)
 {
+
 	if(argc != 2)
 		return 0;
 
-	int buf[COLUMN];
-	memset(buf ,0x00 ,sizeof(buf));
+	int buf[COLUMN] = { 0 };
 
 	/*Separate the data of buddyinfo*/
 	char* token = strtok(argv[1], ","); 
 	int count = 0;
-	for(count=0 ;count<COLUMN;count++)
+	for(count=0; count<COLUMN, token!=NULL; count++)
 	{ 
 		buf[count] = atoi(token);
 		token = strtok(NULL, ",");
@@ -39,12 +40,9 @@ int main(int argc ,char **argv)
 	int overallFragmentation = 0;
 	unsigned long llTotalFreePages=0;
 
-	unsigned long llaFragValuePerPages[COLUMN] ;
-	unsigned long llaTotalFragPerPages[COLUMN] ;
+	unsigned long llaFragValuePerPages[COLUMN] = { 0 };
+	unsigned long llaTotalFragPerPages[COLUMN] = { 0 };
 	unsigned long llapowerof2[COLUMN]  = {1 ,2 ,4 ,8 ,16 ,32 ,64 ,128 ,256 ,512 ,1024};
-
-	memset(llaFragValuePerPages ,0x00 ,sizeof(llaFragValuePerPages));
-	memset(llaTotalFragPerPages ,0x00 ,sizeof(llaTotalFragPerPages));
 
 	llTotalFreePages = TotalFreePages(0 ,buf ,llapowerof2);
 
