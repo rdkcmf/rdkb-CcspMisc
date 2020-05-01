@@ -84,6 +84,17 @@ AC_ARG_ENABLE([multipartUtilEnable],
 esac],[MULTIPART_UTIL_ENABLE=false])
 AM_CONDITIONAL([MULTIPART_UTIL_ENABLE], [test x$MULTIPART_UTIL_ENABLE = xtrue])
 
+
+AC_ARG_ENABLE([wbCfgTestAppEnable],
+[  --enable-wbCfgTestAppEnable    Turn on wbCfgTestApp ],
+[case "${enableval}" in
+  yes) WEBCFG_TESTAPP_ENABLE=true ;;
+  no)  WEBCFG_TESTAPP_ENABLE=false ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-wbCfgTestAppEnable]) ;;
+esac],[WEBCFG_TESTAPP_ENABLE=false])
+AM_CONDITIONAL([WEBCFG_TESTAPP_ENABLE], [test x$WEBCFG_TESTAPP_ENABLE = xtrue])
+
+
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -120,6 +131,8 @@ AM_COND_IF([NOTIFYLEASE_ENABLE], [AM_COND_IF([CCSP_ARCH_ARM],
 AM_COND_IF([SETLED_ENABLE], [AC_CONFIG_FILES([source/SetLED/Makefile])])
 
 AM_COND_IF([MULTIPART_UTIL_ENABLE], [AC_CONFIG_FILES([source/multipartRoot/Makefile])])
+
+AM_COND_IF([WEBCFG_TESTAPP_ENABLE], [AC_CONFIG_FILES([source/wbCfgTestDaemon/Makefile] [source/wbCfgTestApp/Makefile] )])
 
 AC_OUTPUT
 

@@ -26,9 +26,13 @@ if SETLED_ENABLE
 SETLED = SetLED
 endif
 
+if WEBCFG_TESTAPP_ENABLE
+WBCFG_TEST = wbCfgTestDaemon wbCfgTestApp
+endif
+
 if MULTIPART_UTIL_ENABLE
 MULTIPART_UTIL = multipartRoot
 endif
 
-SUBDIRS = Psmcli parcon LTime print_uptime webcfg_decoder MemFrag_Calc $(SETLED) $(MULTIPART_UTIL)
+SUBDIRS = Psmcli parcon LTime print_uptime webcfg_decoder MemFrag_Calc $(SETLED) $(MULTIPART_UTIL) $(WBCFG_TEST)
 
