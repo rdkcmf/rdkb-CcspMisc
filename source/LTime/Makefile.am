@@ -16,26 +16,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-bin_PROGRAMS = LTime
 
-AM_CFLAGS = -I$(top_srcdir)/source -I$(top_srcdir)/source/include -I$(top_srcdir)/source/util -I$(top_srcdir)/../hal/include
-hardware_platform = i686-linux-gnu
-AM_LDFLAGS =  -lpthread -lz -lccsp_common
-if CCSP_ARCH_ARM
-AM_LDFLAGS += -lhal_plaform -lsysevent -lutapi -lutctx -lulog
-endif
+bin_PROGRAMS = LTime
 
 LTime_SOURCES = LTime.c
 
-if CCSP_ARCH_ARM
-LTime_CPPFLAGS = -D_ANSC_LINUX -D_ANSC_USER -I$(top_srcdir)/../hal/include
-LTime_LDFLAGS =  -lhal_platform
-endif
-
-if CCSP_ARCH_ARM
-LTime_LDFLAGS += -lhal_platform
-endif
-
-LTime_LDADD=$(EXTRA_DEPENDENCIES)
-
-
+LTime_LDFLAGS = -lhal_platform

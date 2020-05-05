@@ -141,9 +141,10 @@ AC_FUNC_MALLOC
 AC_CONFIG_FILES(
 	source/Psmcli/Makefile
 	source/LTime/Makefile
+	source/TimeConv/Makefile
 	source/parcon/Makefile
 	source/webcfg_decoder/Makefile
-    	source/MemFrag_Calc/Makefile
+	source/MemFrag_Calc/Makefile
 	source/Makefile
 	Makefile
 )

@@ -16,10 +16,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-bin_PROGRAMS = bridgeUtils
+
 AM_CFLAGS = -D_GNU_SOURCE
 AM_CFLAGS += -fno-exceptions -Os -Wall -Wextra
-AM_LDFLAGS =  -lpthread -lrt -lz -lccsp_common $(DBUS_LIBS)
+
+bin_PROGRAMS = bridgeUtils
+
 bridgeUtils_CPPFLAGS = -I$(top_srcdir)/include \
 						-I$(top_srcdir)/source/include \
 						-I$(top_srcdir)/source/bridge_utils/include \

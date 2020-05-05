@@ -17,11 +17,3 @@
 # limitations under the License.
 ##########################################################################
 SUBDIRS = source
-
-lib_LTLIBRARIES=libtime_conversion.la
-libtime_converion_la_CPPFLAGS = -D_ANSC_LINUX -D_ANSC_USER -I$(top_srcdir)/../hal/include
-libtime_conversion_la_LDFLAGS= -lccsp_common
-libtime_conversion_la_LDFLAGS= -lhal_platform
-libtime_conversion_la_SOURCES= source/TimeConv/time_conversion.c
-libtime_conversion_la_DEPENDENCIES=
-libtime_conversion_la_LIBADD=$(libtime_conversion_la_DEPENDENCIES)

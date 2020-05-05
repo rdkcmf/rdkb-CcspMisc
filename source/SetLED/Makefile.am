@@ -16,26 +16,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-bin_PROGRAMS = SetLED
 
-AM_CFLAGS = -I$(top_srcdir)/source -I$(top_srcdir)/source/include -I$(top_srcdir)/source/util -I$(top_srcdir)/../hal/include
-hardware_platform = i686-linux-gnu
-AM_LDFLAGS =  -lpthread -lz -lccsp_common
-if CCSP_ARCH_ARM
-AM_LDFLAGS += -lhal_plaform -lsysevent -lutapi -lutctx -lulog
-endif
+bin_PROGRAMS = SetLED
 
 SetLED_SOURCES = SetLED.c
 
-if CCSP_ARCH_ARM
-SetLED_CPPFLAGS = -D_ANSC_LINUX -D_ANSC_USER -I$(top_srcdir)/../hal/include
-SetLED_LDFLAGS =  -lhal_platform
-endif
-
-if CCSP_ARCH_ARM
-SetLED_LDFLAGS += -lhal_platform
-endif
-
-SetLED_LDADD=$(EXTRA_DEPENDENCIES)
-
-
+SetLED_LDFLAGS = -lhal_platform

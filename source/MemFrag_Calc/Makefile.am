@@ -16,7 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
+
 bin_PROGRAMS = MemFrag_Calc
 
-MemFrag_Calc_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/source/include -I$(top_srcdir)/source/util/utils $(DBUS_CFLAGS)
 MemFrag_Calc_SOURCES = MemFragCalc.c
