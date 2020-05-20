@@ -2,6 +2,15 @@
 
 #include "webconfig_framework.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include<netdb.h>
+#include<netinet/in.h>
+#include<sys/types.h>
+#include<sys/socket.h>
+#include<string.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 
 #define TXID_LOWER 1000
 
@@ -24,6 +33,11 @@ char* component_id = "ccsp.webconfignotify";
 char *pCfg = CCSP_MSG_BUS_CFG;
 #endif 
 
+#define CcspTraceInfo printf
+
+#define CcspTraceError printf
+
+char *arr[SUBDOC_COUNT+1]= { "blockeddevices","portforwarding","porttriggering",(char*) 0};
 
 int gEntries = 0;
 int sleep_time = 0 ;
@@ -128,6 +142,8 @@ pErr scenario_TimeOut(void *data)
 	struct teststruct *data_received = (struct teststruct*) data ;
 
 	printf("****** Processing Bob data received ********\n");
+
+	sleep_time = defFunc_calculateTimeout(gEntries);
 	int count = sleep_time + 5 ;
 	sleep(count);
 	printf("Data received is %d %d %d \n",data_received->val1,data_received->val2,data_received->val3);
@@ -201,6 +217,8 @@ pErr scenario_MAXTIMEOUT(void *data)
 	struct teststruct *data_received = (struct teststruct*) data ;
 	printf("******* scenario 5 Processing Bob data received *********\n");
 
+	sleep_time = defFunc_calculateTimeout(gEntries);
+
 	int count = sleep_time * 4 ;
 	sleep(count);
 
@@ -223,9 +241,10 @@ size_t calculateTimeout_portmap(size_t numOfEntries)
 
 }
 
-void callTestFunc()
+
+void registerData()
 {
-	char *arr[SUBDOC_COUNT+1]= { "blockeddevices","portforwarding","porttriggering",(char*) 0};
+
 	int ver[3] = {1,2,3};
 	int i =0;
 
@@ -254,6 +273,13 @@ void callTestFunc()
 
 	setVersion VersionSet = setV;
 	register_sub_docs(blobData,SUBDOC_COUNT,VersionGet,VersionSet);
+
+}
+void callTestFunc()
+{
+
+	registerData();
+	int i =0;
 
     int count, num;
 
@@ -319,10 +345,6 @@ void callTestFunc()
 			{
 				  execDataTest->calcTimeout = calculateTimeout_portmap ;
 
-			}
-			else
-			{
-				execDataTest->calcTimeout = NULL ;
 			}
 
 		    PushBlobRequest(execDataTest);
@@ -535,6 +557,7 @@ void callTestFunc()
 	    for (i=0; i < count ;i++)
 		{
 
+
 			tStruct = (teststruct*) malloc ( sizeof(teststruct));
 
 		    execDataTest = (execData*) malloc (sizeof(execData));
@@ -576,8 +599,178 @@ void callTestFunc()
 
 }
 
+void* create_server()
+{
+	printf("Inside create_server\n");
+	int sockfd,portno,newsockfd ;
+	char buffer[512]={0};
+	struct sockaddr_in serv_addr,cli_addr;
+	socklen_t cli_len;
+
+	teststruct *tStruct = NULL;
+	execData *execDataTest = NULL;
+
+	int n;
+	//Call socket function 
+	sockfd=socket(AF_INET,SOCK_STREAM,0);
+
+	if (sockfd<0){
+	printf("Failed to open socket\n");
+		return (void*)-1;
+	}
+
+	bzero((char *) &serv_addr, sizeof(serv_addr));
+	portno=5027;
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	serv_addr.sin_port = htons(portno);
+//Bind the host address
+	if ( bind(sockfd,(struct sockaddr *) & serv_addr, sizeof(serv_addr) ) < 0  ) {
+		      perror("Error: ");
+
+		printf("bind failed\n");
+		return (void*)-1;
+	}
+
+
+	while (1)
+	{
+		// accept the connection
+
+		// listen for the connections
+		listen(sockfd,10);
+		cli_len=sizeof(cli_addr);
+		newsockfd=accept(sockfd, (struct sockaddr *) & cli_addr, &cli_len) ;
+		if (newsockfd < 0) {
+			printf("failed while accepting\n");
+			return (void*)-1;
+		}
+		// read what client is sending
+		bzero(buffer,256);
+		n = read(newsockfd,buffer,511);
+		if (n < 0) 
+		{
+			printf("error reading socket\n");
+			return (void*)-1;
+		}
+		printf("Message is %s\n",buffer);
+
+    		char *array[64];
+    		int i=0, count=0;
+
+		array[i] = strtok (buffer, " ");
+
+  		while (array[i] != NULL)
+   		{
+   			array[++i] = strtok(NULL," ");
+   			count++;
+ 
+    		}
+    		if ( count !=5 )
+    		{
+    			printf("Please pass all the required Info(scenario subdoc_name transaction_id version numOfEntries_in_subdoc)\n");
+				continue;
+    		}
+
+
+
+		tStruct = (teststruct*) malloc ( sizeof(teststruct));
+
+		execDataTest = (execData*) malloc (sizeof(execData));
+
+		memset(execDataTest, 0, sizeof(execDataTest));
+		memset(tStruct, 0, sizeof(tStruct));
+
+
+		tStruct->val1 = (rand() % (200 - 100 + 1)) + 100; 
+		tStruct->val2 = (rand() % (300 - 200 + 1)) + 200; 
+		tStruct->val3 = (rand() % (400 - 300 + 1)) + 300; 
+		
+		strncpy(execDataTest->subdoc_name,array[1],sizeof(execDataTest->subdoc_name)-1);
+
+	        execDataTest->txid = (uint16_t) atoi(array[2]); 
+	        execDataTest->version = (uint32_t) atoi(array[3]); 
+	        execDataTest->numOfEntries = atoi(array[4]); 
+
+
+		execDataTest->user_data = (void*)tStruct; 
+		execDataTest->calcTimeout = NULL ;
+		execDataTest->rollbackFunc = rollbackFunction ;
+
+    		switch(atoi(array[0]))
+    		{
+
+    			case 1 :
+    				printf("ACK\n");
+				execDataTest->executeBlobRequest = scenario_ACK;
+
+    				break;
+    			case 2 :
+    				printf("TIMEOUT\n");
+    				gEntries = execDataTest->numOfEntries ;
+    				execDataTest->executeBlobRequest = scenario_TimeOut;
+
+    				break;
+    				
+    			case 3 :
+    				printf("NACK\n");
+    				 execDataTest->executeBlobRequest = scenario_NACK;
+
+    				break;	
+    			case 4 :
+
+    				printf("MAXTIMEOUT\n");
+    				gEntries = execDataTest->numOfEntries ;
+
+    				execDataTest->executeBlobRequest = scenario_MAXTIMEOUT;
+
+    				break;	
+
+      			 default :
+       				  printf("Generic scenario\n");
+       				  execDataTest->executeBlobRequest = scenario_gen;
+
+    		}
+
+	        printf("tStruct->val1 is %d ,tStruct->val2 is  %d , tStruct->val3 %d \n ",tStruct->val1,tStruct->val2,tStruct->val3);
+
+	        printf("execDataTest->txid is %hu ,execDataTest->version %u , execDataTest->numOfEntries %lu , execDataTest->subdoc_name %s \n ",execDataTest->txid,execDataTest->version,execDataTest->numOfEntries,execDataTest->subdoc_name);
+
+    		PushBlobRequest(execDataTest);
+
+    		if (execDataTest)
+		    {
+		    	free(execDataTest);
+		    	execDataTest = NULL ;
+		    }
+		gEntries = 0;
+		close(newsockfd);	
+	}
+
+
+	close(sockfd);
+	return NULL;
+
+}
+
+void InitAndDeamonize()
+{
+
+		registerData();
+
+		pthread_t tid;
+
+		int ret = pthread_create(&tid, NULL, &create_server, NULL); 
+
+		while(1)
+		{
+			sleep(60);
+		}
+}
+
 int main(int argc, char *argv[])
 {
+	int daemon = 0;
 	if ( argc > 1 )
 	{
 		if ( strcmp(argv[1],"help") == 0 )
@@ -610,12 +803,53 @@ int main(int argc, char *argv[])
 	        }
 	#endif 
 
-	callTestFunc();
- 
-    while(1)
-    {
-    	sleep(1);
-    }
+	printf("Please enter 1 to run testapp in a daemon mode , enter any other command to run in non daemon mode\n");
+	scanf("%d",&daemon);
+	if ( daemon == 1 )
+	{
+			
+		printf("daemon mode selected\n");
+
+		pid_t process_id = 0;
+		pid_t sid = 0;
+		int ret = 0;
+
+		// Create child process
+		process_id = fork();
+		if (process_id < 0) {
+		    printf("fork failed!\n");
+		    return 1;
+		} else if (process_id > 0) {
+		        return 0;
+		}
+
+		//unmask the file mode
+		umask(0);
+
+		//set new session
+		sid = setsid();
+		if (sid < 0) {
+		    printf("setsid failed!\n");
+		    return 1;
+		}
+
+		// Change the current working directory to root.
+		chdir("/");
+
+		InitAndDeamonize();
+
+	}
+
+	else
+	{
+		callTestFunc();
+	 
+		while(1)
+		{
+		   	sleep(1);
+		}
+	}
+
 	return 0;
 
 }
