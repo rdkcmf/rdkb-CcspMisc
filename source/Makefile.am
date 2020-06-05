@@ -26,5 +26,9 @@ if SETLED_ENABLE
 SETLED = SetLED
 endif
 
-SUBDIRS = Psmcli parcon LTime print_uptime webcfg_decoder MemFrag_Calc $(SETLED)
+if MULTIPART_UTIL_ENABLE
+MULTIPART_UTIL = multipartRoot
+endif
+
+SUBDIRS = Psmcli parcon LTime print_uptime webcfg_decoder MemFrag_Calc $(SETLED) $(MULTIPART_UTIL)
 
