@@ -75,6 +75,15 @@ AC_ARG_ENABLE([setLED],
  [setled_enable=true])
 AM_CONDITIONAL([SETLED_ENABLE], [test x$setled_enable = xtrue])
 
+AC_ARG_ENABLE([multipartUtilEnable],
+[  --enable-multipartUtilEnable    Turn on multipartUtility ],
+[case "${enableval}" in
+  yes) MULTIPART_UTIL_ENABLE=true ;;
+  no)  MULTIPART_UTIL_ENABLE=false ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-multipartUtilEnable]) ;;
+esac],[MULTIPART_UTIL_ENABLE=false])
+AM_CONDITIONAL([MULTIPART_UTIL_ENABLE], [test x$MULTIPART_UTIL_ENABLE = xtrue])
+
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -109,6 +118,8 @@ AM_COND_IF([NOTIFYLEASE_ENABLE], [AM_COND_IF([CCSP_ARCH_ARM],
            [AC_CONFIG_FILES([source/Notify_Lease/Makefile])])], [])
 
 AM_COND_IF([SETLED_ENABLE], [AC_CONFIG_FILES([source/SetLED/Makefile])])
+
+AM_COND_IF([MULTIPART_UTIL_ENABLE], [AC_CONFIG_FILES([source/multipartRoot/Makefile])])
 
 AC_OUTPUT
 
