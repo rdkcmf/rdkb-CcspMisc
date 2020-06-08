@@ -25,9 +25,6 @@ if CCSP_ARCH_ARM
 AM_LDFLAGS += -lhal_plaform -lsysevent -lutapi -lutctx -lulog
 endif
 
-if CCSP_ARCH_MIPS
-AM_LDFLAGS += -llmapi
-endif
 SetLED_SOURCES = SetLED.c
 
 if CCSP_ARCH_ARM
@@ -36,7 +33,6 @@ SetLED_LDFLAGS =  -lhal_platform
 endif
 
 if CCSP_ARCH_ARM
-EXTRA_DEPENDENCIES= -llmapi
 SetLED_LDFLAGS += -lhal_platform
 endif
 

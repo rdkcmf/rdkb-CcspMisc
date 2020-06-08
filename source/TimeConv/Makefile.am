@@ -41,4 +41,4 @@ hardware_platform = i686-linux-gnu
 lib_LTLIBRARIES = libtime_conversion.la
 #libCcspCommonLibrary_time_conversion_la_CPPFLAGS = -I/mnt/home/sshriva01/Master_Sep28/generic/hal/include/
 libtime_conversion_la_SOURCES = time_conversion.c
-libtime_conversion_la_LDFLAGS =  -lpthread -lrt -lz -lhal_platform -lhal_ethsw -llmapi
+libtime_conversion_la_LDFLAGS =  -lpthread -lrt -lz -lhal_platform -lhal_ethsw 
