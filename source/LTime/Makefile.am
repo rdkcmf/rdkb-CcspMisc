@@ -25,9 +25,6 @@ if CCSP_ARCH_ARM
 AM_LDFLAGS += -lhal_plaform -lsysevent -lutapi -lutctx -lulog
 endif
 
-if CCSP_ARCH_MIPS
-AM_LDFLAGS += -llmapi
-endif
 LTime_SOURCES = LTime.c
 
 if CCSP_ARCH_ARM
@@ -36,7 +33,6 @@ LTime_LDFLAGS =  -lhal_platform
 endif
 
 if CCSP_ARCH_ARM
-EXTRA_DEPENDENCIES= -llmapi
 LTime_LDFLAGS += -lhal_platform
 endif
 
