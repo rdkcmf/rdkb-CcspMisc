@@ -27,6 +27,7 @@ static void packJsonNumber( cJSON *item, msgpack_packer *pk );
 static void packJsonArray( cJSON *item, msgpack_packer *pk, int isBlob );
 static void packJsonObject( cJSON *item, msgpack_packer *pk, int isBlob);
 static void packJsonBool(cJSON *item, msgpack_packer *pk, bool value);
+static void packJsonNULL(cJSON *item, msgpack_packer *pk);
 static void __msgpack_pack_string( msgpack_packer *pk, const void *string, size_t n );
 static int convertJsonToBlob(char *data, char **encodedData, int isBlob);
 static int convertJsonToMsgPack(char *data, char **encodedData, int isBlob);
@@ -129,6 +130,16 @@ static void packJsonBool(cJSON *item, msgpack_packer *pk, bool value)
 		msgpack_pack_false(pk);
 	}
 }
+
+static void packJsonNULL(cJSON *item, msgpack_packer *pk)
+{
+	if(item->string != NULL)
+	{
+		__msgpack_pack_string(pk, item->string, strlen(item->string));
+	}
+	msgpack_pack_nil(pk);
+}
+
 static void packJsonArray(cJSON *item, msgpack_packer *pk, int isBlob)
 {
 	int arraySize = cJSON_GetArraySize(item);
@@ -162,6 +173,9 @@ static void packJsonArray(cJSON *item, msgpack_packer *pk, int isBlob)
 				break;
 			case cJSON_Object:
 				packJsonObject(arrItem, pk, isBlob);
+				break;
+			case cJSON_NULL:
+				packJsonNULL(arrItem, pk);
 				break;
 		}
 	}
@@ -205,9 +219,12 @@ static void packBlobData(cJSON *item, msgpack_packer *pk )
 	int len = 0;
 	printf("------ %s ------\n",__FUNCTION__);
 	blobData = strdup(item->valuestring);
-	printf("%s\n",blobData);
-	len = getEncodedBlob(blobData, &encodedBlob);
-	printf("%s\n",encodedBlob);
+	if(strlen(blobData) > 0)
+	{
+		printf("%s\n",blobData);
+		len = getEncodedBlob(blobData, &encodedBlob);
+		printf("%s\n",encodedBlob);
+	}
 	__msgpack_pack_string(pk, item->string, strlen(item->string));
 	__msgpack_pack_string(pk, encodedBlob, len);
 	free(encodedBlob);
@@ -252,6 +269,9 @@ static void packJsonObject( cJSON *item, msgpack_packer *pk, int isBlob )
 				break;
 			case cJSON_Object:
 				packJsonObject(child, pk, isBlob);
+				break;
+			case cJSON_NULL:
+				packJsonNULL(child, pk);
 				break;
 		}
 		child = child->next;
@@ -448,13 +468,10 @@ int parseSubDocArgument(char **args, int count, multipart_subdoc_t **docs)
 	return 1;
 }
 
-int append_str (char * dest, char * src)
+int append_str (char * dest, char * src, int destLength)
 {
-	int len;
-	len = strlen (src);
-	if (len > 0)
-	    strncpy (dest, src, len);
-	return len;
+	memcpy (dest, src, destLength);
+	return destLength;
 }
 
 void generateBoundary(char *s ) 
@@ -490,19 +507,24 @@ int getSubDocBuffer(multipart_subdoc_t subdoc, char **buffer)
 	memset (hdrbuf, 0, sizeof(char)*(MAX_BUFSIZE+subdoc.length));
 	pHdr = hdrbuf;
 	length = add_header("Content-type: ","application/msgpack", pHdr);
+	bufLength += length;
 	pHdr += length;
 	length = add_header("Etag: ",subdoc.version, pHdr);
+	bufLength += length;
 	pHdr += length;
 	length = add_header("Namespace: ",subdoc.name, pHdr);
+	bufLength += length;
 	pHdr += length;
-	length = append_str(pHdr, "\n");
+	length = append_str(pHdr, "\n", 1);
+	bufLength += length;
 	pHdr += length;
-	length = append_str(pHdr, subdoc.data);
+	length = append_str(pHdr, subdoc.data, subdoc.length);
+	bufLength += length;
 	pHdr += length;
-	length = append_str(pHdr, "\r\n\n");
+	length = append_str(pHdr, "\r\n\n", 3);
+	bufLength += length;
 	pHdr += length;
 	*buffer = hdrbuf;
-	bufLength = strlen(*buffer);
 	return bufLength;
 }
 int writeToFile(char *file_path, char *data, size_t size)
@@ -553,30 +575,41 @@ int generateMultipartBuffer(char *rootVersion, int subDocCount, multipart_subdoc
 	tempBuf = (char *)malloc(sizeof(char)*((MAX_BUFSIZE*2)+subDocsDataSize));
 	memset (tempBuf, 0, sizeof(char)*(MAX_BUFSIZE+subDocsDataSize));
 	temp = tempBuf;
-	len = append_str(temp, "HTTP 200 OK\r\n");
+	len = append_str(temp, "HTTP 200 OK\r\n", strlen("HTTP 200 OK")+2);
+	bufLen += len;
 	temp += len;
 	len = add_header("Content-type: multipart/mixed; boundary=",boundary,temp);
+	bufLen += len;
 	temp += len;
 	len = add_header("Etag: ",rootVersion,temp);
+	bufLen += len;
 	temp += len;
-	len = append_str(temp, "\n");
+	len = append_str(temp, "\n", 1);
+	bufLen += len;
 	temp += len;
 	for (j = 0; j<subDocCount; j++)
 	{
 		len = add_header("--",boundary,temp);
+		bufLen += len;
 		temp += len;
 		char *subDocBuffer = NULL;
 		subdocLen = getSubDocBuffer(subdocs[j], &subDocBuffer);
 		printf("subdocLen: %d\n", subdocLen);
-		strncpy(temp, subDocBuffer, subdocLen);
+		memcpy(temp, subDocBuffer, subdocLen);
+		bufLen += subdocLen;
 		temp += subdocLen;
 		free(subDocBuffer);
 	}
-	len = append_str(temp, "--");
+	len = append_str(temp, "--", 2);
+	bufLen += len;
 	temp += len;
-	sprintf(tempBuf,"%s%s--\r\n",tempBuf,boundary);
+	len = append_str(temp, boundary, strlen(boundary));
+	bufLen += len;
+	temp += len;
+	len = append_str(temp, "--\r\n", 4);
+	bufLen += len;
+	temp += len;
 	*buffer = tempBuf;
-	bufLen = (int)(strlen(*buffer));
 	printf("bufLen: %d\n",bufLen);
 	return bufLen;
 }
