@@ -28,7 +28,8 @@ int main(int argc ,char **argv)
 	/*Separate the data of buddyinfo*/
 	char* token = strtok(argv[1], ","); 
 	int count = 0;
-	for(count=0; count<COLUMN, token!=NULL; count++)
+        /* CID: 151599 Misused comma operator*/
+	for(count=0; count<COLUMN && token!=NULL; count++)
 	{ 
 		buf[count] = atoi(token);
 		token = strtok(NULL, ",");

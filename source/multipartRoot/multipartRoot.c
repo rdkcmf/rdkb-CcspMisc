@@ -460,6 +460,8 @@ int parseSubDocArgument(char **args, int count, multipart_subdoc_t **docs)
 		}
 		else
 		{
+                                /* CID: 155140 Resource leak*/
+                                free(fileName);
 				return 0;
 			}
 		free(fileName);
@@ -474,9 +476,8 @@ int append_str (char * dest, char * src, int destLength)
 	return destLength;
 }
 
-void generateBoundary(char *s ) 
+void generateBoundary(char *s, int len ) 
 {
-	const int len = 50;
 	int i = 0;
     static const char charset[] =
         "0123456789"
@@ -487,8 +488,8 @@ void generateBoundary(char *s )
     for (i = 0; i < len; ++i) {
         s[i] = charset[rand() % (sizeof(charset) - 1)];
     }
-
-    s[len] = 0;
+    /* CID: 155144 Out-of-bounds access*/
+    s[len - 1] = '\0';
 }
 
 int add_header(char *name, char *value, char *buffer)
@@ -563,11 +564,11 @@ int getSubDocsDataSize(multipart_subdoc_t *subdocs, int count)
 
 int generateMultipartBuffer(char *rootVersion, int subDocCount, multipart_subdoc_t *subdocs, char **buffer)
 {
-	char boundary[50] = {'\0'};
+	char boundary[50];
 	char *temp = NULL;
 	char  * tempBuf = NULL;
 	int subDocsDataSize = 0, subdocLen = 0, bufLen = 0, len = 0, j = 0;
-	generateBoundary(boundary);
+	generateBoundary(boundary, sizeof(boundary));
 	printf("boundary: %s\n",boundary);
 	subDocsDataSize = getSubDocsDataSize(subdocs, subDocCount);
 	printf("Subdocs data size: %d\n",subDocsDataSize);

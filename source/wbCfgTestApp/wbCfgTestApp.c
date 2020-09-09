@@ -64,6 +64,9 @@ uint32_t getV(char* subdoc)
 		return 101;
 	else if ( strcmp(subdoc,"porttriggering") == 0 )
 		return 102;
+        /* CID: 144662 Missing return statement*/
+        else
+           return 0;
 }
 
 int setV(char* subdoc,uint32_t version)
@@ -80,10 +83,15 @@ pErr scenario_ACK(void *data)
 	if (lexecReturn == NULL )
 	{
 		printf("malloc failed\n");
+                /* CID: 144653 Dereference after null check*/
+                return lexecReturn;
 	}
-	memset(lexecReturn,0,sizeof(lexecReturn));
+        /* CID:144657 Wrong sizeof argument*/
+	memset(lexecReturn,0,sizeof(Err));
 	struct teststruct *data_received = (struct teststruct*) data ;
-
+        /* CID: 144643 Dereference before null check*/
+        if(!data_received)
+            return NULL;
 	printf("***** Processing Bob data received *******\n");
 	printf("Data received is %d %d %d \n",data_received->val1,data_received->val2,data_received->val3);
 	sleep(1);
@@ -108,8 +116,11 @@ pErr scenario_NACK(void *data)
 	if (lexecReturn == NULL )
 	{
 		printf("malloc failed\n");
+                /* CID: 144650 Dereference after null check*/
+                return lexecReturn;
 	}
-	memset(lexecReturn,0,sizeof(lexecReturn));
+        /* CID: 144647 Wrong sizeof argument*/
+	memset(lexecReturn,0,sizeof(Err));
 
 
 		struct teststruct *data_received = (struct teststruct*) data ;
@@ -135,12 +146,17 @@ pErr scenario_TimeOut(void *data)
 	if (lexecReturn == NULL )
 	{
 		printf("malloc failed\n");
+                /* CID: 144654 Dereference after null check*/
+                return lexecReturn;
 	}
-	memset(lexecReturn,0,sizeof(lexecReturn));
+        /* CID: 144659 Wrong sizeof argument*/
+	memset(lexecReturn,0,sizeof(Err));
 
 
 	struct teststruct *data_received = (struct teststruct*) data ;
-
+        /* CID: 144642 Dereference before null check*/
+        if(!data_received)
+           return NULL;
 	printf("****** Processing Bob data received ********\n");
 
 	sleep_time = defFunc_calculateTimeout(gEntries);
@@ -165,11 +181,17 @@ pErr scenario_gen(void *data)
 	if (lexecReturn == NULL )
 	{
 		printf("malloc failed\n");
+                /* CID: 144645 Dereference after null check*/
+                return lexecReturn;
 	}
-	memset(lexecReturn,0,sizeof(lexecReturn));
+        /* CID: 144651 Wrong sizeof argument*/
+	memset(lexecReturn,0,sizeof(Err));
 
 	struct teststruct *data_received = (struct teststruct*) data ;
 	sleep(1);
+        /* CID: 144641 Dereference before null check*/
+        if (!data_received)
+            return NULL;
 
 	printf(" Processing Bob data received\n");
 	printf("Data received is %d %d %d \n",data_received->val1,data_received->val2,data_received->val3);
@@ -211,10 +233,16 @@ pErr scenario_MAXTIMEOUT(void *data)
 	if (lexecReturn == NULL )
 	{
 		printf("malloc failed\n");
+                /* CID: 144661 Dereference after null check*/
+                return lexecReturn;
 	}
-	memset(lexecReturn,0,sizeof(lexecReturn));
+        /* CID:144649 Wrong sizeof argument*/
+	memset(lexecReturn,0,sizeof(Err));
 
 	struct teststruct *data_received = (struct teststruct*) data ;
+        /* CID: 144644 Dereference before null check*/
+        if (!data_received)
+             return NULL;
 	printf("******* scenario 5 Processing Bob data received *********\n");
 
 	sleep_time = defFunc_calculateTimeout(gEntries);
@@ -296,6 +324,7 @@ void callTestFunc()
 	int calT = 0;
 	execData *execDataTest = NULL;
 	teststruct *tStruct = NULL;
+        char init_file[128] = {0} ;
 
 	switch(error_case)
 	{
@@ -310,8 +339,12 @@ void callTestFunc()
 			tStruct = (teststruct*) malloc ( sizeof(teststruct));
 
 		    execDataTest = (execData*) malloc (sizeof(execData));
+                    /* CID: 144656 Dereference before null check*/
+                    if (!execDataTest)
+                         return;
 
-		    memset(execDataTest, 0, sizeof(execDataTest));
+                    /* CID: 144646 Wrong sizeof argument*/
+		    memset(execDataTest, 0, sizeof(execData));
 
 			printf("Please enter 1 to use subdoc/component specific , 2 to use default calculte timeout\n");
 			scanf("%d", &calT); 
@@ -363,7 +396,8 @@ void callTestFunc()
 			printf("*********** WebcConfig Scenario 2***********\n");
 			printf("**** Validating notifying subdoc versions to WebConfig Client ****\n");
 			printf("Please enter the component init file\n");
-			char init_file[128] = {0} ;
+                        /* CID: 144648 Branch past initializationi init_file move to start of func*/
+                        /* TODO: CID:144652 Getting taint value(init_file) and  passing to func*/
 			scanf("%s",init_file);
 		    check_component_crash(init_file);
 
@@ -553,6 +587,7 @@ void callTestFunc()
 	if ( defCase == 1 )
 	{
 		printf("Enter the number of request to be sent\n");
+             /* TODO: CID:144655 Untrusted loop bound - taint value due to scanf*/
 	    scanf("%d", &count);
 	    for (i=0; i < count ;i++)
 		{

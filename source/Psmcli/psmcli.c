@@ -493,9 +493,11 @@ static void ccsp_exception_handler(int sig, siginfo_t *info, void *context)
     fd1 = open( cmdFile, O_RDONLY );
     if( fd1 != -1 ) /*RDKB-7441, CID-33230, validating the file handle*/
     {
-        read(fd1, cmdName, sizeof(cmdName)-1 );
+        /*CID: 72093 Ignoring number of bytes read*/
+        if (read(fd1, cmdName, sizeof(cmdName)-1 ) < 0) {
+            fprintf( stderr, "ccsp_exception_handler: File read error");
+        }
         close(fd1);
-        fd1 = -1;
     }
 
     /* dump general information */
@@ -590,10 +592,14 @@ static void enable_ccsp_exception_handlers( )
 static psmcli_debug_level psmcli_get_debug_level(char const *file_name) {
 
     psmcli_debug_level ret = PSMCLI_DEBUG_PRINT_NONE;
-    unsigned char c = '0';  // single char, so limited to 10 levels
+    int c;  /// single char, so limited to 10 levels
     FILE *fd = fopen(file_name, "r");
 
-    if(fd == NULL || (c = fgetc(fd)) == EOF || c <= '0')
+    /* CID: 69724 Unsigned compared with neg
+     * CID: 55411 Truncated stdio return value
+     * CID: 71698 Operands don't affect result
+     */
+    if(fd == NULL || (c = fgetc(fd)) == EOF || c < '0')
         ret = PSMCLI_DEBUG_PRINT_NONE;
     else
         ret = c - '0';
@@ -816,7 +822,7 @@ unsigned int process_get(int const argCnt, char const * const argVars[], char co
         cmd_index++;
     }
 
-    if(psmValue != NULL) ((CCSP_MESSAGE_BUS_INFO*)busHandle)->freefunc(psmValue);
+    /* CID: 52817 Logically dead code - remove the check as psmValue = NULL*/
 
     //    CcspTraceDebug(("<%s>[%s]: function finished returing %d\n", prog_name, func_name, func_ret));
 
@@ -892,7 +898,8 @@ unsigned int process_getdetail(int const argCnt, char const * const argVars[], c
         cmd_index++;
     }
 
-    if(psmValue != NULL) ((CCSP_MESSAGE_BUS_INFO*)busHandle)->freefunc(psmValue); 
+     /* CID: 74897 Logically dead code - remove the check as psmValue = NULL*/
+
 
     //    CcspTraceDebug(("<%s>[%s]: function finished returing %d\n", prog_name, func_name, func_ret));
 
@@ -993,10 +1000,7 @@ unsigned int process_get_e(int const argCnt, char const * const argVars[], char 
         cmd_index += 2;
     }
 
-    if (psmValue != NULL) {
-        //        CcspTraceDebug(("<%s>[%s]: freeing psmValue at address 0x%x\n", prog_name, func_name, (unsigned int)psmValue));
-        ((CCSP_MESSAGE_BUS_INFO*)busHandle)->freefunc(psmValue); 
-    }
+     /* CID: 67777 Logically dead code - remove the check as psmValue = NULL*/
     
     //    CcspTraceDebug(("<%s>[%s]: function finished returing %d\n", prog_name, func_name, func_ret));
 
@@ -1105,7 +1109,7 @@ unsigned int process_getdetail_e(int const argCnt, char const * const argVars[],
         cmd_index += 2;
     }
 
-    if (psmValue != NULL) ((CCSP_MESSAGE_BUS_INFO*)busHandle)->freefunc(psmValue); 
+    /* CID: 74897 Logically dead code - remove the check as psmValue = NULL*/    
 
     //    CcspTraceDebug(("<%s>[%s]: function finished returing %d\n", prog_name, func_name, func_ret));
 
