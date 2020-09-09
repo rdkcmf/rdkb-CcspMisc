@@ -138,9 +138,18 @@ int readBinFromFile(const char *filename, char **data, size_t *len)
 	}
 	fseek(fp, 0, SEEK_END);
 	ch_count = ftell(fp);
+        /* CID: 143581 Argument cannot be negative*/
+        if (ch_count < 0){
+            fclose(fp);
+            return 0;
+        }
 	fseek(fp, 0, SEEK_SET);
 	*data = (char *) malloc(sizeof(char) * (ch_count + 1));
-	fread(*data, 1, ch_count,fp);
+        /*CID: 143582 Ignoring number of bytes read*/
+	if (1 != fread(*data, ch_count, 1, fp)){
+            fclose(fp);
+            return 0;
+        }
 	*len = (size_t)ch_count;
 	fclose(fp);
 	return 1;
