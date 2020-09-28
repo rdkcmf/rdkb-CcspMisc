@@ -16,26 +16,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-if CCSP_ARCH_ARM
-if NOTIFYLEASE_ENABLE
-NOTIFY = Notify_Lease
-endif
-endif
+bin_PROGRAMS = bridgeUtils
+AM_CFLAGS = -D_GNU_SOURCE
+AM_CFLAGS += -fno-exceptions -Os -Wall -Wextra
+AM_LDFLAGS =  -lpthread -lrt -lz -lccsp_common $(DBUS_LIBS)
+bridgeUtils_CPPFLAGS = -I$(top_srcdir)/include \
+						-I$(top_srcdir)/source/include \
+						-I$(top_srcdir)/source/bridge_utils/include \
+						-I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/ccsp \
+						-I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/ovsagent \
+						$(DBUS_CFLAGS)
 
-if SETLED_ENABLE
-SETLED = SetLED
-endif
+bridgeUtils_SOURCES = bridge_util.c bridge_creation.c
 
-if WEBCFG_TESTAPP_ENABLE
-WBCFG_TEST = wbCfgTestDaemon wbCfgTestApp
-endif
-
-if MULTIPART_UTIL_ENABLE
-MULTIPART_UTIL = multipartRoot
-endif
-
-if BRIDGE_UTILS_BIN_ENABLE
-BRIDGE_UTIL = bridge_utils
-endif
-
-SUBDIRS = Psmcli parcon LTime webcfg_decoder MemFrag_Calc $(SETLED) $(MULTIPART_UTIL) $(BRIDGE_UTIL) $(WBCFG_TEST)
+bridgeUtils_LDFLAGS =  -lrt -lccsp_common -lsyscfg -lsysevent -lprivilege -lbridge_utils 

@@ -84,6 +84,14 @@ AC_ARG_ENABLE([multipartUtilEnable],
 esac],[MULTIPART_UTIL_ENABLE=false])
 AM_CONDITIONAL([MULTIPART_UTIL_ENABLE], [test x$MULTIPART_UTIL_ENABLE = xtrue])
 
+AC_ARG_ENABLE([bridgeUtilsBin],
+[  --enable-bridgeUtilsBin    Turn on bridgeUtilsBin ],
+[case "${enableval}" in
+  yes) BRIDGE_UTILS_BIN_ENABLE=true ;;
+  no)  BRIDGE_UTILS_BIN_ENABLE=false ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-bridgeUtilsBin]) ;;
+esac],[BRIDGE_UTILS_BIN_ENABLE=false])
+AM_CONDITIONAL([BRIDGE_UTILS_BIN_ENABLE], [test x$BRIDGE_UTILS_BIN_ENABLE = xtrue])
 
 AC_ARG_ENABLE([wbCfgTestAppEnable],
 [  --enable-wbCfgTestAppEnable    Turn on wbCfgTestApp ],
@@ -132,6 +140,8 @@ AM_COND_IF([SETLED_ENABLE], [AC_CONFIG_FILES([source/SetLED/Makefile])])
 AM_COND_IF([MULTIPART_UTIL_ENABLE], [AC_CONFIG_FILES([source/multipartRoot/Makefile])])
 
 AM_COND_IF([WEBCFG_TESTAPP_ENABLE], [AC_CONFIG_FILES([source/wbCfgTestDaemon/Makefile] [source/wbCfgTestApp/Makefile] )])
+
+AM_COND_IF([BRIDGE_UTILS_BIN_ENABLE], [AC_CONFIG_FILES([source/bridge_utils/bridge_utils_bin/Makefile] [source/bridge_utils/Makefile] )])
 
 AC_OUTPUT
 

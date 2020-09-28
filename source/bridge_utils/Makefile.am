@@ -16,26 +16,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-if CCSP_ARCH_ARM
-if NOTIFYLEASE_ENABLE
-NOTIFY = Notify_Lease
-endif
-endif
 
-if SETLED_ENABLE
-SETLED = SetLED
-endif
-
-if WEBCFG_TESTAPP_ENABLE
-WBCFG_TEST = wbCfgTestDaemon wbCfgTestApp
-endif
-
-if MULTIPART_UTIL_ENABLE
-MULTIPART_UTIL = multipartRoot
-endif
-
-if BRIDGE_UTILS_BIN_ENABLE
-BRIDGE_UTIL = bridge_utils
-endif
-
-SUBDIRS = Psmcli parcon LTime webcfg_decoder MemFrag_Calc $(SETLED) $(MULTIPART_UTIL) $(BRIDGE_UTIL) $(WBCFG_TEST)
+SUBDIRS = bridge_utils_bin
