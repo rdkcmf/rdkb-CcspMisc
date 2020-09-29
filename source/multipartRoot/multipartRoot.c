@@ -7,6 +7,7 @@
 #include <cJSON.h>
 #include <stdint.h>
 #include <getopt.h>
+#include "base64.h"
 
 #define MULTIPART_DOC "/nvram/multipart.bin"
 #define MAX_BUFSIZE 512

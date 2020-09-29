@@ -23,8 +23,10 @@
 #include <getopt.h>
 #include <string.h>
 #include <msgpack.h>
+#include "base64.h"
 
 const char *filename = NULL;
+static int readBinFromFile(const char *filename, char **data, size_t *len);
 
 void msgPackDecoder()
 {
@@ -127,32 +129,32 @@ void b64Decoder()
 	}
 }
 
-int readBinFromFile(const char *filename, char **data, size_t *len)
+static int readBinFromFile(const char *filename, char **data, size_t *len)
 {
-	FILE *fp;
-	int ch_count = 0;
-	fp = fopen(filename, "r+");
-	if (fp == NULL)
-	{
-		return 0;
-	}
-	fseek(fp, 0, SEEK_END);
-	ch_count = ftell(fp);
+        FILE *fp;
+        int ch_count = 0;
+        fp = fopen(filename, "r+");
+        if (fp == NULL)
+        {
+                return 0;
+        }
+        fseek(fp, 0, SEEK_END);
+        ch_count = ftell(fp);
         /* CID: 143581 Argument cannot be negative*/
         if (ch_count < 0){
             fclose(fp);
             return 0;
         }
-	fseek(fp, 0, SEEK_SET);
-	*data = (char *) malloc(sizeof(char) * (ch_count + 1));
+        fseek(fp, 0, SEEK_SET);
+        *data = (char *) malloc(sizeof(char) * (ch_count + 1));
         /*CID: 143582 Ignoring number of bytes read*/
-	if (1 != fread(*data, ch_count, 1, fp)){
+        if (1 != fread(*data, ch_count, 1, fp)){
             fclose(fp);
             return 0;
         }
-	*len = (size_t)ch_count;
-	fclose(fp);
-	return 1;
+        *len = (size_t)ch_count;
+        fclose(fp);
+        return 1;
 }
 
 
