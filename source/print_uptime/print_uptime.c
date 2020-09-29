@@ -30,7 +30,6 @@ int main(int argc, char *argv[])
     struct sysinfo l_sSysInfo;
     struct tm * l_sTimeInfo;
     time_t l_sNowTime;
-    int l_iDays, l_iHours, l_iMins, l_iSec;
     char l_cLocalTime[32] = {0};
     FILE *l_fBootLogFile = NULL;
 	char l_cLine[128] = {0};

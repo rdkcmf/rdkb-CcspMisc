@@ -177,7 +177,7 @@ int main(int argc, char**argv)
     char    cmdConcat[PSMCLI_CMD_LEN_MAX]    = {0};
     char    *pCfg                            = CCSP_MSG_BUS_CFG;
     void    *bus_handle                      = NULL;
-    int     tmpLen                           = 0;
+    unsigned int     tmpLen                  = 0;
     int     cmdTableLen                      = sizeof(cmdsTable) / sizeof(cmdsTable_s);
     int     ret                              = 0;
     char    component_id[256]                = {0} ;
@@ -473,6 +473,7 @@ static int is_core_dump_opened(void)
 
 static void ccsp_exception_handler(int sig, siginfo_t *info, void *context)
 {
+    UNREFERENCED_PARAMETER(context);
     int fd1 = -1;
     pid_t pid = getpid();
     char mapsFile[32]     = {0};
@@ -556,7 +557,8 @@ static void ccsp_exception_handler(int sig, siginfo_t *info, void *context)
 static void enable_ccsp_exception_handlers( )
 {
 
-    struct sigaction sigact = { 0 };
+    struct sigaction sigact;
+    memset(&sigact, 0, sizeof(sigaction));
 
     sigact.sa_sigaction = ccsp_exception_handler;
     sigact.sa_flags = SA_RESTART | SA_SIGINFO;
@@ -1024,7 +1026,7 @@ unsigned int process_getdetail_e(int const argCnt, char const * const argVars[],
     char *typeStrEnv = NULL;
     char const func_name[] = "process_getdetail_e";
     errno_t rc = -1;
-    int mem_alloc_size = 0;
+    unsigned int mem_alloc_size = 0;
 
     if ((cmd_cnt % 2) != 0) {
     	CcspTraceWarning(("<%s>[%s]: arg count = %d is not even, returning %d CCSP_ERR_INVALID_ARGUMENTS\n", 
@@ -1127,7 +1129,6 @@ unsigned int process_set(int const argCnt, char const * const argVars[], char co
     unsigned int func_ret = CCSP_SUCCESS;
     char *psmValue = NULL;
     unsigned int psmType = ccsp_string;
-    char *typeStr = NULL;
     char const func_name[] = "process_set";
     
     if ((cmd_cnt % 2) != 0) {
@@ -1208,11 +1209,8 @@ unsigned int process_setdetail(int const argCnt, char const * const argVars[], c
     int cmd_cnt = argCnt - 2;
     unsigned int ret = 0;
     unsigned int func_ret = CCSP_SUCCESS;
-    char *psmValue = NULL;
     unsigned int psmType = ccsp_string;
-    char *typeStr = NULL;
     char const func_name[] = "process_setdetail";
-    errno_t rc = -1;
 
     if ((cmd_cnt % 3) != 0) {
     	CcspTraceWarning(("<%s>[%s]: arg count = %d is not a multiple of 3, returning %d CCSP_ERR_INVALID_ARGUMENTS\n", 
@@ -1350,7 +1348,6 @@ unsigned int process_getinstcnt(int const argCnt, char const * const argVars[], 
     unsigned int ret = 0;
     unsigned int instanceCnt = 0;
     unsigned  int *instanceList = NULL;
-    unsigned int i = 0;
     char const func_name[] = "process_getinstcnt";
 
     while(cmd_cnt--) {
@@ -1388,7 +1385,7 @@ static unsigned int ccspType_from_Name( char *name, unsigned int *ccspType )
 {
 	errno_t rc = -1;
 	int ind = -1;
-	int i;
+	unsigned int i;
 
 	if(( name == NULL ) || ( ccspType == NULL ))
 		return CCSP_FAILURE;
@@ -1414,7 +1411,7 @@ static unsigned int ccspType_from_Name( char *name, unsigned int *ccspType )
 static unsigned int typeString_from_ccspType( unsigned int ccspType, char *typeString )
 {
 	errno_t rc = -1;
-	int i;
+	unsigned int i;
 
 	if( typeString == NULL )
 		return CCSP_FAILURE;
@@ -1449,8 +1446,6 @@ static unsigned int typeString_from_ccspType( unsigned int ccspType, char *typeS
 // Convert from ccsp type to string version or vice-versa
 static unsigned int get_type_info(unsigned int *ccspType, char **typeString, int const typeFormat) {
 
-    char const func_name[] = "get_type_info";
-	errno_t rc = -1;
 	unsigned int ret = CCSP_SUCCESS;
 
     if(typeFormat == TYPE_FORMAT_CCSP)

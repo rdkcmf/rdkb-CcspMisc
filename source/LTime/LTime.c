@@ -20,6 +20,8 @@
 #include <stdio.h>
 #include <string.h>
 #ifdef UTC_ENABLE
+#include <stdlib.h>
+#include <unistd.h>
 #include "platform_hal.h"
 #endif
 #define DATE_MAX_STR_SIZE 26
@@ -31,12 +33,12 @@
 
 time_t getOffset()
 {
-    time_t off;
+    time_t off = 0;
+
+#ifdef UTC_ENABLE
     char a[100];char cmd[100];
     char *pTimeOffset = a;
     FILE *fp;
-
-#ifdef UTC_ENABLE
     if(!access("/nvram/ETHWAN_ENABLE", 0))
     {
 	snprintf(cmd,sizeof(cmd),"sysevent get ipv4-timeoffset");
@@ -56,8 +58,7 @@ time_t getOffset()
 int main( int argc, char *argv[]) {
 
     time_t now_time, now_time_local,off;
-    struct tm now_tm_utc, now_tm_local;
-    char str_utc[DATE_MAX_STR_SIZE];
+    struct tm now_tm_local;
     char str_local[DATE_MAX_STR_SIZE];
 
     off = getOffset();

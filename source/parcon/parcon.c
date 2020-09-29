@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/file.h>
+#include <stdlib.h>
 #include "safec_lib_common.h"
 
 #define PCMD_LIST "/tmp/.pcmd"
@@ -86,4 +87,5 @@ errno_t rc		= -1;
 
    system("echo parcon_exit >> "LOG_FILE"; date >> "LOG_FILE);
    system("echo ----------------- >> "LOG_FILE);
+   return 0;
 }

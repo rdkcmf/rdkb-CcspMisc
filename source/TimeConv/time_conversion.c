@@ -16,11 +16,14 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 **************************************************************************/
+#define _GNU_SOURCE 1
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
 #ifdef UTC_ENABLE
 #include "platform_hal.h"
+#include <stdlib.h>
+#include <unistd.h>
 #endif
 #include "safec_lib_common.h"
 
@@ -38,13 +41,14 @@ char *offset = "-25200";
 
 int ConvLocalToUTC(char* LocalTime, char* UtcTime);
 static int getLocalTimeStr(char *pTime, char *pDate);
+static int validateTime(char *pTime);
 
 time_t getOffset()
 {
     time_t off = 0;
+#ifdef UTC_ENABLE
     char a[100]; char cmd[100];
     FILE *fp;
-#ifdef UTC_ENABLE
     if(!access("/nvram/ETHWAN_ENABLE", 0))
     {
         snprintf(cmd,sizeof(cmd),"sysevent get ipv4-timeoffset");
@@ -68,12 +72,10 @@ time_t getOffset()
 }
 static int getUTCTimeStr(char *pTime,char *pDate)
 {
-   time_t now_time, now_time_local,off;
-   struct tm now_tm_utc, now_tm_local;
-   char str_utc[DATE_MAX_STR_SIZE];
+   time_t now_time;
+   struct tm now_tm_local;
    char str_local[DATE_MAX_STR_SIZE];
    char str_date[DATE_MAX_STR_SIZE];
-   char Utc[30];
    errno_t rc = -1;
 
    time(&now_time);
@@ -81,14 +83,16 @@ static int getUTCTimeStr(char *pTime,char *pDate)
    /* human readable */
    strftime(str_local, DATE_MAX_STR_SIZE, DATE_FMT, &now_tm_local);
    strftime(str_date, DATE_MAX_STR_SIZE, DATE_FMT, &now_tm_local);
-   rc = strcpy_s(pTime, LOCAL_TIME_SIZE, str_local);
+   char *pStr_local = str_local;
+   rc = strcpy_s(pTime, LOCAL_TIME_SIZE, pStr_local);
    if( rc != EOK )
    {
       ERR_CHK(rc);
       return( 0 );
    }
 
-   rc = strcpy_s(pDate, UTC_DATE_SIZE, str_date);
+   char *pStr_date = str_date;
+   rc = strcpy_s(pDate, UTC_DATE_SIZE, pStr_date);
    if( rc != EOK )
    {
       ERR_CHK(rc);
@@ -100,12 +104,10 @@ static int getUTCTimeStr(char *pTime,char *pDate)
 
 static int getLocalTimeStr(char *pTime,char *pDate)
 {
-   time_t now_time, now_time_local,off;
-   struct tm now_tm_utc, now_tm_local;
-   char str_utc[DATE_MAX_STR_SIZE];
+   time_t now_time;
+   struct tm now_tm_local;
    char str_local[DATE_MAX_STR_SIZE];
    char str_date[DATE_MAX_STR_SIZE];
-   char Utc[30];
    errno_t rc = -1;
 
    time(&now_time);
@@ -114,13 +116,15 @@ static int getLocalTimeStr(char *pTime,char *pDate)
    /* human readable */
    strftime(str_local, DATE_MAX_STR_SIZE, DATE_FMT, &now_tm_local);
    strftime(str_date, DATE_MAX_STR_SIZE, DATE_FMT_2, &now_tm_local);
-   rc = strcpy_s(pTime, LOCAL_TIME_SIZE, str_local);
+   char *pStr_local = str_local;
+   rc = strcpy_s(pTime, LOCAL_TIME_SIZE, pStr_local);
    if( rc != EOK )
    {
       ERR_CHK(rc);
       return( 0 );
    }
-   rc = strcpy_s(pDate, LOCAL_DATE_SIZE, str_date);
+   char *pStr_date = str_date;
+   rc = strcpy_s(pDate, LOCAL_DATE_SIZE, pStr_date);
    if( rc != EOK )
    {
       ERR_CHK(rc);
@@ -141,8 +145,8 @@ int ConvLocalToUTC(char* LocalTime, char* UtcTime)
 	int result = 0;
     /* LOCAL: 2016-09-30T12:34:11Z
    */
-    struct tm cal = {};
-    struct tm now_tm_utc;
+    struct tm cal = {0};
+    struct tm now_tm_utc = {0};
 
     len = validateTime(LocalTime);
     result = getLocalTimeStr(LTime,LDate);
@@ -159,7 +163,8 @@ int ConvLocalToUTC(char* LocalTime, char* UtcTime)
         return(-1);
     }
 
-    rc = strcpy_s(TmpTime, sizeof(TmpTime), LTime);
+    char *pLTime = LTime;
+    rc = strcpy_s(TmpTime, sizeof(TmpTime), pLTime);
 	if( rc != EOK )
 	{
 		ERR_CHK(rc);
@@ -268,7 +273,7 @@ int ConvLocalToUTC(char* LocalTime, char* UtcTime)
 	printf("\n cmp = %d \n", ind);
 	return ind;
 }
-int validateTime(char *pTime)
+static int validateTime(char *pTime)
 {
     int TimeLen = strlen(pTime);
     if(6 > TimeLen)
@@ -282,7 +287,7 @@ int validateTime(char *pTime)
     else
     {
          printf("Invalid time input\n");
-         return 0;    
+         return 0;
     }
 }
 
@@ -299,8 +304,8 @@ int ConvUTCToLocal( char* UtcTime, char* LocalTime)
 
     /* LOCAL: 2016-09-30T12:34:11Z
    */
-    struct tm cal = {};
-    struct tm now_tm_utc;
+    struct tm cal = {0};
+    struct tm now_tm_utc = {0};
     len = validateTime(UtcTime);
     //getLocalTimeStr(LTime);
     result = getUTCTimeStr(LTime,UtcDate);
@@ -317,7 +322,8 @@ int ConvUTCToLocal( char* UtcTime, char* LocalTime)
         return(-1);
     }
 
-    rc = strcpy_s(TmpTime, sizeof(TmpTime), LTime);
+    char *pLTime = LTime;
+    rc = strcpy_s(TmpTime, sizeof(TmpTime), pLTime);
     if( rc != EOK )
     {
         ERR_CHK(rc);
@@ -458,7 +464,8 @@ static int pick_days(char *days_rule,int *Days_Mod)
    }
    day_str[strlen(day_str)-1] = '\0';
    printf("rules %s\n",day_str);
-   rc = strcpy_s(days_rule, DAYS_RULE_SIZE, day_str);
+   char *pDay_str = day_str;
+   rc = strcpy_s(days_rule, DAYS_RULE_SIZE, pDay_str);
    if( rc != EOK )
    {
       ERR_CHK(rc);
@@ -554,7 +561,6 @@ int split_BlockDays(int sRet, int eRet, char *sBDays, char *eBDays)
     int Days_Mod[7] = {0};
     char days[64] = { 0 };
     char days_rule[DAYS_RULE_SIZE];
-    int i =0;
     errno_t rc = -1;
     int result = 0;
 
@@ -594,13 +600,14 @@ int split_BlockDays(int sRet, int eRet, char *sBDays, char *eBDays)
 
             rc = memset_s(sBDays,DAYS_RULE_SIZE,0,DAYS_RULE_SIZE);
             ERR_CHK(rc);
-            rc = strcpy_s(sBDays, DAYS_RULE_SIZE, days_rule);
+            char *pDays_rule = days_rule;
+            rc = strcpy_s(sBDays, DAYS_RULE_SIZE, pDays_rule);
             if( rc != EOK )
             {
                ERR_CHK(rc);
                return ( -1 );
             }
-            rc = strcpy_s(eBDays, DAYS_RULE_SIZE, days_rule);
+            rc = strcpy_s(eBDays, DAYS_RULE_SIZE, pDays_rule);
             if( rc != EOK )
             {
                ERR_CHK(rc);
@@ -629,7 +636,8 @@ int split_BlockDays(int sRet, int eRet, char *sBDays, char *eBDays)
 
              rc = memset_s(sBDays,DAYS_RULE_SIZE,0,DAYS_RULE_SIZE);
              ERR_CHK(rc);
-             rc = strcpy_s(sBDays, DAYS_RULE_SIZE, days_rule);
+             char *pDays_rule = days_rule;
+             rc = strcpy_s(sBDays, DAYS_RULE_SIZE, pDays_rule);
              if( rc != EOK )
              {
                 ERR_CHK(rc);
@@ -653,7 +661,8 @@ int split_BlockDays(int sRet, int eRet, char *sBDays, char *eBDays)
 
             rc = memset_s(eBDays,DAYS_RULE_SIZE,0,DAYS_RULE_SIZE);
             ERR_CHK(rc);
-            rc = strcpy_s(eBDays, DAYS_RULE_SIZE, days_rule);
+            char *p_days_rule = days_rule;
+            rc = strcpy_s(eBDays, DAYS_RULE_SIZE, p_days_rule);
             if( rc != EOK )
             {
                ERR_CHK(rc);

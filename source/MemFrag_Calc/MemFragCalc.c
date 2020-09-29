@@ -10,7 +10,7 @@
 unsigned long TotalFreePages(int index ,int buf[] ,unsigned long llapowerof2[])
 {
 	unsigned long sum = 0;
-	for(index ;index<COLUMN ; index++)
+	for(;index<COLUMN ; index++)
 	{
 		sum += (buf[index] * llapowerof2[index] );
 	}
@@ -35,8 +35,7 @@ int main(int argc ,char **argv)
 		token = strtok(NULL, ",");
 	}
 
-	int i=0, j=0;	
-	int Fragmentation = 0;
+	int i=0;
 	int avarageFragmentation = 0;
 	int overallFragmentation = 0;
 	unsigned long llTotalFreePages=0;
