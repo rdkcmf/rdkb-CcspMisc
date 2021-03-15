@@ -9,8 +9,11 @@
 #include <getopt.h>
 #include "base64.h"
 
+#define WIFI_METADATA_MAP_SIZE                3
 #define MULTIPART_DOC "/nvram/multipart.bin"
 #define MAX_BUFSIZE 512
+#define OUTFILE "/tmp/testUtilityTemp.bin"
+#define B64OUTFILE "/tmp/b64output.bin"
 
 typedef struct multipart_subdoc
 {
@@ -20,6 +23,29 @@ typedef struct multipart_subdoc
 	size_t length;
 }multipart_subdoc_t;
 
+typedef struct{
+    char *name;
+    char *value;
+    uint32_t value_size;
+    uint16_t type;
+}dataval_t;
+
+typedef struct{
+    size_t count;
+    dataval_t *data_items;
+} data1_t;
+
+struct webcfg_token {
+    const char *name;
+    size_t length;
+};
+
+typedef struct wifi_appenddoc_struct{
+    char * subdoc_name;
+    uint32_t  version;
+    uint16_t   transaction_id;
+    size_t *count;
+}wifi_appenddoc_t;
 /*----------------------------------------------------------------------------*/
 /*                             Function Prototypes                            */
 /*----------------------------------------------------------------------------*/
@@ -35,12 +61,39 @@ static int convertJsonToMsgPack(char *data, char **encodedData, int isBlob);
 static void decodeMsgpackData(char *encodedData, int encodedDataLen);
 static int convertMsgpackToBlob(char *data, int size, char **encodedData);
 static char *decodeBlobData(char *data);
+static void __msgpack_pack_string_nvp( msgpack_packer *pk,
+                                       const struct webcfg_token *token,
+                                       const char *val );
+
+static void __msgpack_pack_string_nvp1( msgpack_packer *pk,
+                                       const struct webcfg_token *token,
+                                       const char *val, int size );
+
 int readFromFile(const char *filename, char **data, size_t *len);
 int writeToFile(char *file_path, char *data, size_t size);
 
 /*----------------------------------------------------------------------------*/
 /*                             Internal Functions                             */
 /*----------------------------------------------------------------------------*/
+static void __msgpack_pack_string_nvp( msgpack_packer *pk,
+                                       const struct webcfg_token *token,
+                                       const char *val )
+{
+    if( ( NULL != token ) && ( NULL != val ) ) {
+        __msgpack_pack_string( pk, token->name, token->length );
+        __msgpack_pack_string( pk, val, strlen( val ) );
+    }
+}
+
+static void __msgpack_pack_string_nvp1( msgpack_packer *pk,
+                                       const struct webcfg_token *token,
+                                       const char *val, int size )
+{
+    if( ( NULL != token ) && ( NULL != val ) ) {
+        __msgpack_pack_string( pk, token->name, token->length );
+        __msgpack_pack_string( pk, val, size );
+    }
+}
 
 int processEncoding(char *filename, char *encoding, int isBlob)
 {
@@ -419,13 +472,443 @@ int readFromFile(const char *filename, char **data, size_t *len)
        return 1;
 }
 
+/*=========================For two msgpack inputs=================================*/
+uint16_t generateRandomId()
+{
+    FILE *fp;
+	uint16_t random_key,sz;
+	fp = fopen("/dev/urandom", "r");
+	if (fp == NULL){
+    		return 0;
+    	}    	
+	sz = fread(&random_key, sizeof(random_key), 1, fp);
+	if (!sz)
+	{	
+		fclose(fp);
+		printf("fread failed.\n");
+		return 0;
+	}
+	printf("generateRandomId\n %d",random_key);
+	fclose(fp);		
+	return(random_key);
+}
+
+ssize_t wifi_pack_appenddoc(const wifi_appenddoc_t *appenddocData,void **data)
+{
+    size_t rv = -1;
+
+    msgpack_sbuffer sbuf;
+    msgpack_packer pk;
+    msgpack_sbuffer_init( &sbuf );
+    msgpack_packer_init( &pk, &sbuf, msgpack_sbuffer_write );
+    msgpack_zone mempool;
+    msgpack_object deserialized;
+    if( appenddocData != NULL )
+    {
+        struct webcfg_token APPENDDOC_MAP_SUBDOC_NAME;
+
+        APPENDDOC_MAP_SUBDOC_NAME.name = "subdoc_name";
+        APPENDDOC_MAP_SUBDOC_NAME.length = strlen( "subdoc_name" );
+        __msgpack_pack_string_nvp( &pk, &APPENDDOC_MAP_SUBDOC_NAME, appenddocData->subdoc_name );
+
+        struct webcfg_token APPENDDOC_MAP_VERSION;
+             
+        APPENDDOC_MAP_VERSION.name = "version";
+        APPENDDOC_MAP_VERSION.length = strlen( "version" );
+        __msgpack_pack_string( &pk, APPENDDOC_MAP_VERSION.name, APPENDDOC_MAP_VERSION.length );
+        msgpack_pack_uint32(&pk,appenddocData->version);
+
+        struct webcfg_token APPENDDOC_MAP_TRANSACTION_ID;
+             
+        APPENDDOC_MAP_TRANSACTION_ID.name = "transaction_id";
+        APPENDDOC_MAP_TRANSACTION_ID.length = strlen( "transaction_id" );
+        __msgpack_pack_string( &pk, APPENDDOC_MAP_TRANSACTION_ID.name, APPENDDOC_MAP_TRANSACTION_ID.length );
+        msgpack_pack_uint16(&pk, appenddocData->transaction_id);
+    }
+    else 
+    {    
+        printf("Doc append data is NULL\n" );
+        return rv;
+    } 
+
+    if( sbuf.data ) 
+    {
+        *data = ( char * ) malloc( sizeof( char ) * sbuf.size );
+
+        if( NULL != *data ) 
+        {
+            memcpy( *data, sbuf.data, sbuf.size );
+	    printf("sbuf.data of appenddoc is %s sbuf.size %zu\n", sbuf.data, sbuf.size);
+            rv = sbuf.size;
+        }
+    }
+
+    msgpack_zone_init(&mempool, 2048);
+
+    msgpack_unpack(sbuf.data, sbuf.size, NULL, &mempool, &deserialized);
+    msgpack_object_print(stdout, deserialized);
+
+    msgpack_zone_destroy(&mempool);
+
+    msgpack_sbuffer_destroy( &sbuf );
+    return rv;   
+}
+
+/**
+ * @brief alterMapData function to change MAP size of encoded msgpack object.
+ *
+ * @param[in] encodedBuffer msgpack object
+ * @param[out] return 0 in success or less than 1 in failure case
+ */
+
+static int alterWifiMapData( char * buf )
+{
+    //Extract 1st byte from binary stream which holds type and map size
+    unsigned char *byte = ( unsigned char * )( &( buf[0] ) ) ;
+    int mapSize;
+    printf("First byte in hex : %x\n", 0xff & *byte );
+    //Calculate map size
+    mapSize = ( 0xff & *byte ) % 0x10;
+
+    if( mapSize == 15 )
+    {
+        printf("Msgpack Map (fixmap) is already at its MAX size i.e. 15\n" );
+        return -1;
+    }
+
+    *byte = *byte + WIFI_METADATA_MAP_SIZE;
+    mapSize = ( 0xff & *byte ) % 0x10;
+    printf("New Map size : %d\n", mapSize );
+    printf("First byte in hex : %x\n", 0xff & *byte );
+    //Update 1st byte with new MAP size
+    buf[0] = *byte;
+    return 0;
+}
+
+char * base64wifiblobencoder(char * blob_data, size_t blob_size, int **encodedLen)
+{
+	char* b64buffer =  NULL;
+	size_t encodeSize = -1;
+   	printf("Data is %s\n", blob_data);
+     	printf("-----------Start of Base64 Encode ------------\n");
+        encodeSize = b64_get_encoded_buffer_size(blob_size);
+        printf("encodeSize is %zu\n", encodeSize);
+        b64buffer = malloc(encodeSize + 1);
+        if(b64buffer != NULL)
+        {
+            memset( b64buffer, 0, sizeof( encodeSize )+1 );
+
+            b64_encode((uint8_t *)blob_data, blob_size, (uint8_t *)b64buffer);
+            b64buffer[encodeSize] = '\0' ;
+        }
+	**encodedLen = encodeSize;
+	return b64buffer;
+}
+
+/**
+ * @brief appendWifiEncodedData function to append two encoded buffer and change MAP size accordingly.
+ * 
+ * @note appendWifiEncodedData function allocates memory for buffer, caller needs to free the buffer(appendData)in
+ * both success or failure case. use wrp_free_struct() for free
+ *
+ * @param[in] encodedBuffer msgpack object (first buffer)
+ * @param[in] encodedSize is size of first buffer
+ * @param[in] metadataPack msgpack object (second buffer)
+ * @param[in] metadataSize is size of second buffer
+ * @param[out] appendData final encoded buffer after append
+ * @return  appended total buffer size or less than 1 in failure case
+ */
+
+size_t appendWifiEncodedData( void **appendData, void *encodedBuffer, size_t encodedSize, void *metadataPack, size_t metadataSize )
+{
+    //Allocate size for final buffer
+    *appendData = ( void * )malloc( sizeof( char * ) * ( encodedSize + metadataSize ) );
+	if(*appendData != NULL)
+	{
+		memcpy( *appendData, encodedBuffer, encodedSize );
+		//Append 2nd encoded buf with 1st encoded buf
+		memcpy( *appendData + ( encodedSize ), metadataPack, metadataSize );
+		//Alter MAP
+		int ret = alterWifiMapData( ( char * ) * appendData );
+		printf("The value of ret in alterMapData  %d\n",ret);
+		if( ret ) {
+		    return -1;
+		}
+		return ( encodedSize + metadataSize );
+	}
+	else
+	{
+		printf("Memory allocation failed\n" );
+	}
+    return -1;
+}
+
+char * append_wifi_doc(char * subdoc_name, uint32_t version, uint16_t trans_id, char * blob_data, size_t blob_size, int *encodedLen)
+{
+    wifi_appenddoc_t *wifi_appenddata = NULL;
+    size_t wifi_appenddocPackSize = -1;
+    size_t wifi_embeddeddocPackSize = -1;
+    void *wifi_appenddocdata = NULL;
+    void *wifi_embeddeddocdata = NULL;
+    char *wifi_finaldocdata = NULL;
+
+    wifi_appenddata = (wifi_appenddoc_t *) malloc(sizeof(wifi_appenddoc_t ));
+    if(wifi_appenddata != NULL)
+    {   
+        memset(wifi_appenddata, 0, sizeof(wifi_appenddoc_t));
+
+        wifi_appenddata->subdoc_name = strdup(subdoc_name);
+        wifi_appenddata->version = version;
+        wifi_appenddata->transaction_id = trans_id;
+	printf("subdoc_name: %s, version: %lu, transaction_id: %hu\n", subdoc_name, (unsigned long)version, trans_id);
+
+    	wifi_appenddocPackSize = wifi_pack_appenddoc(wifi_appenddata, &wifi_appenddocdata);
+	//msgpack_print(wifi_appenddocdata, wifi_appenddocPackSize);
+    	printf("data packed is %s\n", (char*)wifi_appenddocdata);
+ 
+    	free(wifi_appenddata->subdoc_name);
+    	free(wifi_appenddata);
+
+    	wifi_embeddeddocPackSize = appendWifiEncodedData(&wifi_embeddeddocdata, (void *)blob_data, blob_size, wifi_appenddocdata, wifi_appenddocPackSize);
+    	printf("wifi_appenddocPackSize: %zu, blobSize: %zu, wifi_embeddeddocPackSize: %zu\n", wifi_appenddocPackSize, blob_size, wifi_embeddeddocPackSize);
+    	printf("The wifi_embedded doc data is %s\n",(char*)wifi_embeddeddocdata);
+	free(wifi_appenddocdata);
+	//msgpack_print(wifi_embeddeddocdata, wifi_embeddeddocPackSize);
+        printf("\n");
+   	wifi_finaldocdata = base64wifiblobencoder((char *)wifi_embeddeddocdata, wifi_embeddeddocPackSize, &encodedLen);
+    	printf("The wifi_encoded append doc is %s\n",wifi_finaldocdata);
+	free(wifi_embeddeddocdata);
+    }
+    return wifi_finaldocdata;
+}
+
+ssize_t webcfg_pack_doc(const data1_t *packData, void **data)
+{
+	size_t rv = -1;
+	msgpack_sbuffer sbuf;
+	msgpack_packer pk;
+	msgpack_sbuffer_init( &sbuf );
+	msgpack_packer_init( &pk, &sbuf, msgpack_sbuffer_write );
+	int i =0;
+
+	if( packData != NULL && packData->count != 0 )
+	{
+		int count = packData->count;
+		msgpack_pack_map( &pk, 1);
+		__msgpack_pack_string( &pk, "PublicHotspotData", strlen("PublicHotspotData") );
+		msgpack_pack_array( &pk, count );
+
+		for( i = 0; i < count; i++ ) //1 element
+		{
+			msgpack_pack_map( &pk, 2); //name, value, type
+			struct webcfg_token MAP_NAME;
+
+			MAP_NAME.name = "Name";
+			MAP_NAME.length = strlen( "Name" );
+			printf("The count is %d\n", count);
+			__msgpack_pack_string_nvp( &pk, &MAP_NAME, packData->data_items[i].name );
+
+			struct webcfg_token MAP_VALUE;
+
+			MAP_VALUE.name = "Value";
+			MAP_VALUE.length = strlen( "Value" );
+			__msgpack_pack_string_nvp1( &pk, &MAP_VALUE, packData->data_items[i].value, (int)packData->data_items[i].value_size );
+		}
+	}
+	else
+	{
+		printf("parameters is NULL\n" );
+		return rv;
+	}
+
+	if( sbuf.data )
+	{
+		*data = ( char * ) malloc( sizeof( char ) * sbuf.size );
+
+		if( NULL != *data )
+		{
+			memcpy( *data, sbuf.data, sbuf.size );
+			//printf("sbuf.data is %s sbuf.size %ld\n", sbuf.data, sbuf.size);
+			rv = sbuf.size;
+		}
+	}
+
+	msgpack_sbuffer_destroy( &sbuf );
+	return rv;
+}
+
+ssize_t webcfg_pack_rootdoc(const char * blob, void **data, size_t size)
+{
+	size_t rv = -1;
+	msgpack_sbuffer sbuf;
+	msgpack_packer pk;
+	msgpack_sbuffer_init( &sbuf );
+	msgpack_packer_init( &pk, &sbuf, msgpack_sbuffer_write );
+	int i =0;
+
+	if( blob != NULL )
+	{
+		int count = 1;
+		msgpack_pack_map( &pk, 1);
+		__msgpack_pack_string( &pk, "parameters", strlen("parameters") );
+		msgpack_pack_array( &pk, count );
+
+		for( i = 0; i < count; i++ ) //1 element
+		{
+			msgpack_pack_map( &pk, 3); //name, value, type
+			struct webcfg_token MAP_NAME;
+
+			MAP_NAME.name = "name";
+			MAP_NAME.length = strlen( "name" );
+			printf("The count is %d\n", count);
+			__msgpack_pack_string_nvp( &pk, &MAP_NAME, "Device.GRE.X_RDK_PublicHotspotData" );
+
+			struct webcfg_token MAP_VALUE;
+
+			MAP_VALUE.name = "value";
+			MAP_VALUE.length = strlen( "value" );
+			__msgpack_pack_string_nvp1( &pk, &MAP_VALUE, blob, (int)size);
+
+			struct webcfg_token MAP_DATATYPE;
+
+			MAP_DATATYPE.name = "dataType";
+			MAP_DATATYPE.length = strlen( "dataType" );
+			__msgpack_pack_string( &pk, MAP_DATATYPE.name, MAP_DATATYPE.length);
+			msgpack_pack_uint64(&pk,12);
+		}
+	}
+	else
+	{
+		printf("parameters is NULL\n" );
+		return rv;
+	}
+
+	if( sbuf.data )
+	{
+		*data = ( char * ) malloc( sizeof( char ) * sbuf.size );
+
+		if( NULL != *data )
+		{
+			memcpy( *data, sbuf.data, sbuf.size );
+			//printf("sbuf.data is %s sbuf.size %ld\n", sbuf.data, sbuf.size);
+			rv = sbuf.size;
+		}
+	}
+
+	msgpack_sbuffer_destroy( &sbuf );
+	return rv;
+}
+
+int processPacking(char *filename1, char *filename2, uint32_t version, char * subdocname)
+{
+	char *fileData1 = NULL;
+	char *fileData2 = NULL;
+    	size_t len1, len2 = 0;
+	void *packedData, *packedRootData = NULL;
+	//data1_t *packRootData = NULL;
+	data1_t *packBlobData = NULL;
+	size_t rootPackSize, blobPackSize = -1;
+	int encodedLen = 0;
+	char * encodedData = NULL;
+	
+	if(readFromFile(filename1, &fileData1, &len1) && readFromFile(filename2, &fileData2, &len2))
+	{
+		packBlobData = ( data1_t * ) malloc( sizeof( data1_t ) );
+		if(packBlobData != NULL && fileData1 != NULL && fileData2 != NULL)
+		{
+			printf("went here\n");
+			memset(packBlobData, 0, sizeof(data1_t));
+
+			packBlobData->count = 2;
+			packBlobData->data_items = (dataval_t *) malloc( sizeof(dataval_t) * packBlobData->count );
+			memset( packBlobData->data_items, 0, sizeof(dataval_t) * packBlobData->count );
+
+			packBlobData->data_items[0].name = strdup("Device.GRE.X_RDK_TunnelData");
+			packBlobData->data_items[0].value = malloc(sizeof(char) * len1+1);
+			memset(packBlobData->data_items[0].value, 0, sizeof(char) * len1+1);
+			packBlobData->data_items[0].value = memcpy(packBlobData->data_items[0].value, fileData1, len1+1);
+			packBlobData->data_items[0].value[len1] = '\0';
+			packBlobData->data_items[0].value_size = len1;
+			printf("went here2\n");
+			packBlobData->data_items[0].type = 12;
+
+			packBlobData->data_items[1].name = strdup("Device.WiFi.X_RDK_VapData");
+			packBlobData->data_items[1].value = malloc(sizeof(char) * len2+1);
+			memset(packBlobData->data_items[1].value, 0, sizeof(char) * len2+1);
+			packBlobData->data_items[1].value = memcpy(packBlobData->data_items[1].value, fileData2, len2+1);
+			packBlobData->data_items[1].value[len2] = '\0';
+			packBlobData->data_items[1].value_size = len2;
+			packBlobData->data_items[1].type = 12;
+		}
+		else
+		{
+			printf("Failed in memory allocation\n");
+			free(fileData1);
+			free(fileData2);
+			return 0;
+		}
+
+		printf("Before here\n");
+		blobPackSize = webcfg_pack_doc( packBlobData, &packedData);
+		printf("blobPackSize is %zu\n", blobPackSize);
+		
+		if(blobPackSize > 0)
+		{
+			encodedData = append_wifi_doc(subdocname, version, generateRandomId(), (char *)packedData, blobPackSize, &encodedLen);
+			if(writeToFile(B64OUTFILE, (char *)encodedData, (size_t)encodedLen) == 0)
+			{
+				fprintf(stderr,"%s File not Found\n", B64OUTFILE);
+				free(encodedData);
+				return 0;
+			}
+			free(encodedData);
+			rootPackSize = webcfg_pack_rootdoc( (const char *)packedData, &packedRootData, blobPackSize);
+			printf("rootPackSize is %zu\n", rootPackSize);
+		}
+		else
+		{
+			printf("Failed in memory allocation\n");
+			free(fileData1);
+			free(fileData2);
+			free(packedData);
+			return 0;
+		}
+
+		if(rootPackSize > 0 )
+		{
+			printf("Packing is success. Hence writing Packed data to %s\n", OUTFILE);
+			if(writeToFile(OUTFILE, (char *)packedRootData, rootPackSize) == 0)
+			{
+				fprintf(stderr,"%s File not Found\n", OUTFILE);
+				free(packedRootData);
+				return 0;
+			}
+			free(packedRootData);
+		}
+		free(fileData1);
+		free(fileData2);
+		free(packedData);
+	}
+	else
+	{
+		fprintf(stderr,"File not Found\n");
+		return 0;
+	}
+	return 1;
+}
+
+/*=========================For two msgpack inputs=================================*/
+
 int parseSubDocArgument(char **args, int count, multipart_subdoc_t **docs)
 {
 	int i = 0, j = 0, isBlob = 0;
-	char *fileName = NULL;
+	char *fileName1 = NULL;
+	char *fileName2 = NULL;
 	char *fileData = NULL;
 	char outFile[128];
-    size_t len = 0;
+    	size_t len = 0;
+	uint32_t version = 0;
+	int multilevelBlob = 0;
 	char *tempStr= NULL, *docData = NULL, *blobStr = NULL;
 	for (i = 2; i<count; i++)
 	{
@@ -433,8 +916,9 @@ int parseSubDocArgument(char **args, int count, multipart_subdoc_t **docs)
 		docData = strdup(args[i]);
 		tempStr = docData;
 		(*docs)[j].version = strdup(strsep(&tempStr,","));
+		version = strtoul((*docs)[j].version, 0 ,0);
 		(*docs)[j].name = strdup(strsep(&tempStr,","));
-		fileName = strdup(strsep(&tempStr,","));
+		fileName1 = strdup(strsep(&tempStr,","));
 		if(tempStr != NULL)
 		{
 			blobStr = strsep(&tempStr,",");
@@ -442,32 +926,73 @@ int parseSubDocArgument(char **args, int count, multipart_subdoc_t **docs)
 			{
 				isBlob = 1;
 			}
+			else
+			{
+				fileName2 = strdup(blobStr);
+				multilevelBlob = 1;
+			}
 		}
 		free(docData);
-		if(processEncoding(fileName, "M", isBlob))
+		if(!multilevelBlob)
 		{
-			sprintf(outFile,"%s.bin",strtok(fileName,"."));
-			if(readFromFile(outFile, &fileData, &len))
+			if(processEncoding(fileName1, "M", isBlob))
 			{
-				(*docs)[j].data = (char  *)malloc(sizeof(char)*len);
-				memcpy((*docs)[j].data, fileData, len);
-				(*docs)[j].length = len;
-				free(fileData);
+				sprintf(outFile,"%s.bin",strtok(fileName1,"."));
+				if(readFromFile(outFile, &fileData, &len))
+				{
+					(*docs)[j].data = (char  *)malloc(sizeof(char)*len);
+					memcpy((*docs)[j].data, fileData, len);
+					(*docs)[j].length = len;
+					free(fileData);
+				}
+				else
+				{
+					printf("Failed to open %s\n",fileName1);
+					(*docs)[j].data = NULL;
+					(*docs)[j].length = 0;
+				}
 			}
 			else
 			{
-				printf("Failed to open %s\n",fileName);
-				(*docs)[j].data = NULL;
-				(*docs)[j].length = 0;
+		                        /* CID: 155140 Resource leak*/
+		                        free(fileName1);
+					return 0;
 			}
 		}
 		else
 		{
-                                /* CID: 155140 Resource leak*/
-                                free(fileName);
+			if(processPacking(fileName1, fileName2, version, (*docs)[j].name))
+			{
+				if(readFromFile(OUTFILE, &fileData, &len))
+				{
+					(*docs)[j].data = (char  *)malloc(sizeof(char)*len);
+					memcpy((*docs)[j].data, fileData, len);
+					(*docs)[j].length = len;
+					free(fileData);
+				}
+				else
+				{
+					printf("Failed to open %s\n",OUTFILE);
+					(*docs)[j].data = NULL;
+					(*docs)[j].length = 0;
+				}
+			}
+			else
+			{
+	                        free(fileName1);
+				free(fileName2);
 				return 0;
 			}
-		free(fileName);
+			
+		}
+		if(fileName1 != NULL)
+		{
+			free(fileName1);
+		}
+		if(fileName2 != NULL)
+		{
+			free(fileName2);
+		}
 		j++;
 	}
 	return 1;
@@ -522,7 +1047,7 @@ int getSubDocBuffer(multipart_subdoc_t subdoc, char **buffer)
 	length = append_str(pHdr, "\n", 1);
 	bufLength += length;
 	pHdr += length;
-	length = append_str(pHdr, subdoc.data, subdoc.length);
+	length = append_str(pHdr-1, subdoc.data, subdoc.length);
 	bufLength += length;
 	pHdr += length;
 	length = append_str(pHdr, "\r\n\n", 3);
@@ -625,23 +1150,21 @@ int main(int argc, char *argv[])
 	multipart_subdoc_t *subdocs = NULL;
 	char  * buffer = NULL;
 	int bufLen = 0;
-	if(argc < 3)
-	{
-		printf("Usage: ./multipartDoc <root-version> <subDocVersion1,subDocName1,subDocFilePath1,blob> ... <subDocVersionN,subDocNameN,subDocFilePathN,blob>\n");
-		exit(1);
-	}
+
 	rootVersion = strdup(argv[1]);
 	printf("rootVersion: %s\n",rootVersion);
 	subDocCount = argc - 2;
 	printf("subDocCount: %d\n",subDocCount);
 	subdocs = (multipart_subdoc_t  *)malloc(sizeof(multipart_subdoc_t )*subDocCount);
 	memset(subdocs, 0, sizeof(multipart_subdoc_t )*subDocCount);
+
 	if(!parseSubDocArgument(argv, argc, &subdocs))
 	{
 		free(rootVersion);
 		free(subdocs);
 		return 0;
 	}
+
 	bufLen = generateMultipartBuffer(rootVersion, subDocCount, subdocs, &buffer);
 	if(bufLen > 0)
 	{
