@@ -35,6 +35,8 @@ static int convertJsonToMsgPack(char *data, char **encodedData, int isBlob);
 static void decodeMsgpackData(char *encodedData, int encodedDataLen);
 static int convertMsgpackToBlob(char *data, int size, char **encodedData);
 static char *decodeBlobData(char *data);
+int readFromFile(const char *filename, char **data, size_t *len);
+int writeToFile(char *file_path, char *data, size_t size);
 
 /*----------------------------------------------------------------------------*/
 /*                             Internal Functions                             */
