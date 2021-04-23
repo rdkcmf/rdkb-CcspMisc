@@ -1483,7 +1483,8 @@ void removePgdInterfacesFromCurrentIfList(char *current_if_list)
 	char *token = NULL;
 	char tempList[TOTAL_IFLIST_SIZE] = {0}, temp[512] = {0};
 	
-	if(strstr(current_if_list, "pgd") != NULL)
+    // check if space-separated interface list contains either "pgd" or "ethpod"
+	if(strstr(current_if_list, "pgd") != NULL || strstr(current_if_list, "ethpod") != NULL)
 	{
 		bridge_util_log("%s: current_if_list: %s\n",__FUNCTION__, current_if_list);
 		strncpy(currentIfListCopy,current_if_list,sizeof(currentIfListCopy)-1);
@@ -1492,7 +1493,8 @@ void removePgdInterfacesFromCurrentIfList(char *current_if_list)
 
 		while ((token = strtok_r(rest_curlist, " ", &rest_curlist))) 
 		{
-			if(strstr(token, "pgd") == NULL)
+            // skip if it is "pgd" or "ethpod"
+			if(strstr(token, "pgd") == NULL && strstr(token, "ethpod") == NULL)
 			{
 				if(strlen(tempList) > 0)
 				{
