@@ -28,11 +28,6 @@
 
 
 #include "OvsAgentApi.h"
-#include "OvsConfig.h"
-#include "OvsDataTypes.h"
-#include "feedback.h"
-#include "gateway_config.h"
-#include "ovsagent.h"
 
 /**
  * @brief To add a transaction that has been initiated to the transaction store.
@@ -45,3 +40,4 @@ bool create_bridge_api(ovs_interact_request *request, ovs_interact_cb callback);
 bool brctl_interact(ovs_interact_request * request);
 
 #endif
+
