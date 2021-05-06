@@ -11,7 +11,7 @@
 
 #define WIFI_METADATA_MAP_SIZE                3
 #define MULTIPART_DOC "/nvram/multipart.bin"
-#define MAX_BUFSIZE 512
+#define MAX_BUFSIZE 1024
 #define OUTFILE "/tmp/testUtilityTemp.bin"
 #define B64OUTFILE "/tmp/b64output.bin"
 
@@ -1044,13 +1044,13 @@ int getSubDocBuffer(multipart_subdoc_t subdoc, char **buffer)
 	length = add_header("Namespace: ",subdoc.name, pHdr);
 	bufLength += length;
 	pHdr += length;
-	length = append_str(pHdr, "\n", 1);
+	length = append_str(pHdr, "\r\n", 2);
 	bufLength += length;
 	pHdr += length;
-	length = append_str(pHdr-1, subdoc.data, subdoc.length);
+	length = append_str(pHdr, subdoc.data, subdoc.length);
 	bufLength += length;
 	pHdr += length;
-	length = append_str(pHdr, "\r\n\n", 3);
+	length = append_str(pHdr, "\r\n", 2);
 	bufLength += length;
 	pHdr += length;
 	*buffer = hdrbuf;
