@@ -56,6 +56,8 @@ if [ "xcompleted" != "x`syscfg get psm_migration`" ];then
 		psmcli set dmsb.l2net.2.Members.Moca ""
 		psmcli set dmsb.l2net.3.Members.Moca ""
 		psmcli set dmsb.l2net.4.Members.Moca ""
+		psmcli set dmsb.l2net.9.Members.Moca "nmoca0"
+
 		
 		migrationCompleteFlag=1
 	fi
