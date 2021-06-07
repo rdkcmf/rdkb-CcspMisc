@@ -82,7 +82,6 @@ static char *hotspot_enable = "dmsb.hotspot.enable" ;
 
 br_shm_mutex brmutex;
 
-
 /*********************************************************************************************
 
     caller:  main
@@ -234,6 +233,44 @@ int checkIfExists(char* iface_name)
     return INTERFACE_EXIST;
 }
 
+// Function to check if interface is attached to bridge
+int checkIfExistsInBridge(char* iface_name, char *bridge_name)
+{
+	char cmd[128] = {0} ;
+	char *token = NULL;
+	char if_list[IFLIST_SIZE] = {'\0'};
+	if ( 1 == ovsEnable )
+	{
+		snprintf(cmd,sizeof(cmd),"ovs-vsctl list-ifaces %s | grep %s | tr \"\n\" \" \" ",bridge_name, iface_name);
+	}
+	else
+	{
+		snprintf(cmd,sizeof(cmd),"brctl show %s | sed '1d' | awk '{print $NF}' | grep %s | tr \"\n\" \" \" ",bridge_name, iface_name);
+	}
+	FILE *fp = NULL;
+	fp = popen(cmd, "r");
+	if ( fp != NULL )
+	{
+		fgets(if_list,IFLIST_SIZE-1,fp);
+		if_list[strlen(if_list)-1] = '\0';
+		pclose(fp);
+		fp = NULL;
+	}
+	if(strlen(if_list) > 1)
+	{
+		token = strtok(if_list, " ");
+		while(token != NULL)
+		{
+			if(strcmp(token, iface_name) == 0)
+			{
+				bridge_util_log("%s is attached to %s\n",iface_name, bridge_name);
+				return INTERFACE_EXIST;
+			}
+		}
+	}
+	bridge_util_log("%s is not attached to %s\n",iface_name, bridge_name);
+	return INTERFACE_NOT_EXIST;
+}
 
 void removeIfaceFromList(char *IfList, const char *ifname) 
 {
@@ -1064,6 +1101,7 @@ int HandlePostConfigGeneric(bridgeDetails *bridgeInfo,int InstanceNumber)
 
 }
 
+
 /*********************************************************************************************
 
     caller:  CreateBrInterface,DeleteBrInterface,SyncBrInterfaces
@@ -1092,14 +1130,14 @@ int updateBridgeInfo(bridgeDetails *bridgeInfo, char* ifNameToBeUpdated, int Opr
 {
 
 	char IfList_Copy[IFLIST_SIZE] = {0} ;
-    	char tmp_buff[32] = {0} ;
+    char tmp_buff[32] = {0} ;
 
 	int if_type = 0 , vlanId = -1 ;
 	ovs_interact_request ovs_request = {0};
-    	Gateway_Config *pGwConfig = NULL;
+    Gateway_Config *pGwConfig = NULL;
 	bool retValue = false ;
-    	char* token = NULL; 
-    	char* rest = NULL; 
+    char* token = NULL; 
+    char* rest = NULL; 
 
 	ovs_request.block_mode = OVS_ENABLE_BLOCK_MODE ;
 
@@ -1107,63 +1145,85 @@ int updateBridgeInfo(bridgeDetails *bridgeInfo, char* ifNameToBeUpdated, int Opr
 	switch(type)
 	{
 		case IF_BRIDGE_BRIDGEUTIL:
-                		if ( bridgeInfo->bridgeName[0] != '\0' )
-                		{
-                        		strncpy(IfList_Copy,bridgeInfo->bridgeName,sizeof(IfList_Copy)-1);
+			if( ifNameToBeUpdated[0] != '\0' )
+			{
+				strncpy(IfList_Copy, ifNameToBeUpdated, sizeof(IfList_Copy)-1);
+			}
+			else if ( bridgeInfo->bridgeName[0] != '\0' )
+			{
+				strncpy(IfList_Copy,bridgeInfo->bridgeName,sizeof(IfList_Copy)-1);
+			}
+			if_type = OVS_BRIDGE_IF_TYPE ;
+			break;
+		case IF_VLAN_BRIDGEUTIL:
+			if( ifNameToBeUpdated[0] != '\0' )
+			{
+				strncpy(IfList_Copy, ifNameToBeUpdated, sizeof(IfList_Copy)-1);
+			}
+			else if ( bridgeInfo->vlan_name[0] != '\0' )
+			{
+				strncpy(IfList_Copy,bridgeInfo->vlan_name,sizeof(IfList_Copy)-1);
+			}
 
-                		}
-
-				if_type = OVS_BRIDGE_IF_TYPE ;
-				break;
-		case IF_VLAN_BRIDGEUTIL: 
-                		if ( bridgeInfo->vlan_name[0] != '\0' )
-                		{
-                        		strncpy(IfList_Copy,bridgeInfo->vlan_name,sizeof(IfList_Copy)-1);
-                		}
-
-				if_type = OVS_VLAN_IF_TYPE ;
-				vlanId = bridgeInfo->vlanID ;
-				break;
+			if_type = OVS_VLAN_IF_TYPE ;
+			vlanId = bridgeInfo->vlanID ;
+			break;
 		case IF_WIFI_BRIDGEUTIL:
-                		if ( bridgeInfo->WiFiIfList[0] != '\0' )
-                		{
-                        		strncpy(IfList_Copy,bridgeInfo->WiFiIfList,sizeof(IfList_Copy)-1);
-                		}
+			if( ifNameToBeUpdated[0] != '\0' )
+			{
+				strncpy(IfList_Copy, ifNameToBeUpdated, sizeof(IfList_Copy)-1);
+			}
+			else if ( bridgeInfo->WiFiIfList[0] != '\0' )
+			{
+				strncpy(IfList_Copy,bridgeInfo->WiFiIfList,sizeof(IfList_Copy)-1);
+			}
 
-				break;
+			break;
 		case IF_ETH_BRIDGEUTIL: 
-                		if ( bridgeInfo->ethIfList[0] != '\0' )
-                		{
-                        		strncpy(IfList_Copy,bridgeInfo->ethIfList,sizeof(IfList_Copy)-1);
-                		}
+			if( ifNameToBeUpdated[0] != '\0' )
+			{
+				strncpy(IfList_Copy, ifNameToBeUpdated, sizeof(IfList_Copy)-1);
+			}
+			else if ( bridgeInfo->ethIfList[0] != '\0' )
+			{
+				strncpy(IfList_Copy,bridgeInfo->ethIfList,sizeof(IfList_Copy)-1);
+			}
 
-				if_type = OVS_ETH_IF_TYPE ;
-				break;
+			if_type = OVS_ETH_IF_TYPE ;
+			break;
 		case IF_GRE_BRIDGEUTIL: 
-                		if ( bridgeInfo->GreIfList[0] != '\0' )
-                		{
-                        		strncpy(IfList_Copy,bridgeInfo->GreIfList,sizeof(IfList_Copy)-1);
-                		}
-                		// setting as VLAN type since vconfig is used to create the gretap.* interface
-				if_type = OVS_VLAN_IF_TYPE ;
-				vlanId = bridgeInfo->vlanID ;
-				break;
+			if( ifNameToBeUpdated[0] != '\0' )
+			{
+				strncpy(IfList_Copy, ifNameToBeUpdated, sizeof(IfList_Copy)-1);
+			}
+			else if ( bridgeInfo->GreIfList[0] != '\0' )
+			{
+				strncpy(IfList_Copy,bridgeInfo->GreIfList,sizeof(IfList_Copy)-1);
+			}
+			// setting as VLAN type since vconfig is used to create the gretap.* interface
+			if_type = OVS_VLAN_IF_TYPE ;
+			vlanId = bridgeInfo->vlanID ;
+			break;
 		case IF_MOCA_BRIDGEUTIL: 
-                		if ( bridgeInfo->MoCAIfList[0] != '\0' )
-                		{
-                       	 		strncpy(IfList_Copy,bridgeInfo->MoCAIfList,sizeof(IfList_Copy)-1);
-                		}
-				break;
+			if( ifNameToBeUpdated[0] != '\0' )
+			{
+				strncpy(IfList_Copy, ifNameToBeUpdated, sizeof(IfList_Copy)-1);
+			}
+			else if ( bridgeInfo->MoCAIfList[0] != '\0' )
+			{
+				strncpy(IfList_Copy,bridgeInfo->MoCAIfList,sizeof(IfList_Copy)-1);
+			}
+			break;
 		case IF_OTHER_BRIDGEUTIL: 
-            			if( ifNameToBeUpdated[0] != '\0' )
-                                {  
-                                	strncpy(IfList_Copy, ifNameToBeUpdated, sizeof(IfList_Copy)-1);
-                                }
-				break;
+			if( ifNameToBeUpdated[0] != '\0' )
+			{
+				strncpy(IfList_Copy, ifNameToBeUpdated, sizeof(IfList_Copy)-1);
+			}
+			break;
 
 		default  :	
-				bridge_util_log("%s : Invalid Interface Type passed, returning failure.\n",__FUNCTION__); 
-				return FAILED;
+			bridge_util_log("%s : Invalid Interface Type passed, returning failure.\n",__FUNCTION__); 
+			return FAILED;
 	}
 
 		rest = IfList_Copy;
@@ -1514,7 +1574,7 @@ void removePgdInterfacesFromCurrentIfList(char *current_if_list)
     // check if space-separated interface list contains either "pgd" or "ethpod"
 	if(strstr(current_if_list, "pgd") != NULL || strstr(current_if_list, "ethpod") != NULL)
 	{
-		bridge_util_log("%s: current_if_list: %s\n",__FUNCTION__, current_if_list);
+          	bridge_util_log("%s: current_if_list: %s\n",__FUNCTION__, current_if_list);
 		strncpy(currentIfListCopy,current_if_list,sizeof(currentIfListCopy)-1);
 
 		rest_curlist = currentIfListCopy ;
@@ -1563,17 +1623,16 @@ void removePgdInterfacesFromCurrentIfList(char *current_if_list)
 
 void removeIfaceFromBridge(bridgeDetails *bridgeInfo,char *current_if_list) 
 {
-
-  	char* token_curlist = NULL ;
-  	char* token_newlist = NULL;  
-
-    	char* rest_curlist = NULL ;
-    	char* rest_newlist = NULL; 
-
-    	int removeIface = 1 ;
+	char* token_curlist = NULL ;
+	char* token_newlist = NULL;
+	char* rest_curlist = NULL ;
+	char* rest_newlist = NULL;
+	char* vendorIfaces = NULL;
+	int removeIface = 1 ;
 	char lIfName[IFACE_NAME_SIZE] = {0} ;
 	char IfList_Copy[IFLIST_SIZE] = {0} ;
 	char currentIfListCopy[TOTAL_IFLIST_SIZE] = {0} ;
+	vendorIfaces = getVendorIfaces();
 	strncpy(currentIfListCopy,current_if_list,sizeof(IfList_Copy)-1);
 	removePgdInterfacesFromCurrentIfList(currentIfListCopy);
 
@@ -1681,6 +1740,20 @@ void removeIfaceFromBridge(bridgeDetails *bridgeInfo,char *current_if_list)
 			}  
 			
     		}
+			if ( (DeviceMode !=0) && (vendorIfaces != NULL) )
+			{
+				bridge_util_log("%s: vendorIfaces are %s\n",__FUNCTION__, vendorIfaces);
+				strncpy(IfList_Copy,vendorIfaces,sizeof(IfList_Copy)-1);
+				rest_newlist = IfList_Copy;
+				while ((token_newlist = strtok_r(rest_newlist, " ", &rest_newlist)))
+				{
+					if ( strcmp(token_newlist,token_curlist) == 0)
+					{
+						removeIface = 0;
+						goto IF_REMOVE;
+					}
+				}
+			}
 
 IF_REMOVE:
 		if ( removeIface == 1 )
