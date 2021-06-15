@@ -1930,7 +1930,8 @@ int SyncBrInterfaces()
 
 	char event_name[64] = {0};
     	char val[16] = {0} ;
-
+	// setting for mode switch , sleeping for 2 secs so that async events are removed
+  	sleep(2);
 	snprintf(event_name,sizeof(event_name),"multinet_%d-status",InstanceNumber);
 	sysevent_set(syseventfd_vlan, sysevent_token_vlan, event_name, "partial", 0);
 
