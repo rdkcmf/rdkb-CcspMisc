@@ -212,6 +212,39 @@ int br_shm_mutex_close(br_shm_mutex brmutex)
 }
 
 
+// Function to check if interface is created
+int checkIfExists(char* iface_name)
+{
+    struct ifreq ifr;
+    int fd;
+    
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    strcpy(ifr.ifr_name, iface_name);
+    if (ioctl(fd, SIOCGIFFLAGS, &ifr) < 0) {
+        if (errno == ENODEV) {
+            bridge_util_log("%s Interface doesn't exists \n",iface_name);
+            close(fd);
+            return INTERFACE_NOT_EXIST;
+        }
+    }
+
+    close(fd);
+    return INTERFACE_EXIST;
+}
+
+
+void removeIfaceFromList(char *IfList, const char *ifname) 
+{
+    size_t len = strlen(ifname);
+    if (len > 0) {
+        char *token = IfList;
+        while ((token = strstr(token, ifname)) != NULL) {
+            memmove(token, token + len, strlen(token + len) + 1);
+        }
+    }
+}
+
 /*********************************************************************************************
 
     caller:  CreateBrInterface, addIfaceToBridge

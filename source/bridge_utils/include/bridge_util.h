@@ -32,6 +32,12 @@
 #include <sys/mman.h>
 #include <time.h>
 
+#include <sys/socket.h>
+#include <sys/types.h>
+#include<sys/ioctl.h>
+#include<errno.h>
+#include "linux/if.h"
+#include "linux/sockios.h"
 
 #include <ccsp_base_api.h>   // for CCSP_Message_Bus_Init/Exit
 #include "ccsp_memory.h"        // for AnscAllocate/FreeMemory
@@ -87,5 +93,8 @@ int HandlePostConfigGeneric(bridgeDetails *bridgeInfo,int Config) ;
 int Initialize();
 int ExitFunc();
 void getSettings();
+
+int checkIfExists(char* iface_name);
+void removeIfaceFromList(char *str, const char *sub);
 
 #endif
