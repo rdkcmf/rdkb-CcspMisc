@@ -39,3 +39,7 @@ BRIDGE_UTIL = bridge_utils
 endif
 
 SUBDIRS = Psmcli parcon LTime webcfg_decoder MemFrag_Calc $(SETLED) $(MULTIPART_UTIL) $(BRIDGE_UTIL) $(WBCFG_TEST)
+
+if WITH_GTEST_SUPPORT
+SUBDIRS += test
+endif
