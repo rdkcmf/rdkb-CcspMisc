@@ -33,7 +33,7 @@ static void  *bus_handle  = NULL;
 static cap_user   appcaps;
 
 int InstanceNumber = 0; 
-int DeviceMode = 0, ovsEnable = 0 , bridgeUtilEnable = 0 , skipWiFi=0 , skipMoCA = 0 , ethWanEnabled =0 , PORT2ENABLE = 0; // router = 0, bridge = 2
+int DeviceMode = 0, ovsEnable = 0 , bridgeUtilEnable = 0 , skipWiFi=0 , skipMoCA = 0 , ethWanEnabled =0 , PORT2ENABLE = 0, eb_enable = 0; // router = 0, bridge = 2
 int wan_mode = 0;
 char Cmd_Opr[32] = {0};
 char primaryBridgeName[64] = {0} , ethWanIfaceName[64] ={0} ;
@@ -70,6 +70,7 @@ static char *LnFL3Net = "dmsb.MultiLAN.LnF_l3net";
 static char *MeshBhaulL3Net = "dmsb.MultiLAN.MeshBhaul_l3net";
 static char *MeshWiFiBhaulL3Net_2G = "dmsb.MultiLAN.MeshWiFiBhaul_2G_l3net";
 static char *MeshWiFiBhaulL3Net_5G = "dmsb.MultiLAN.MeshWiFiBhaul_5G_l3net";
+static char *EthBhaulL3Net = "dmsb.MultiLAN.EthBhaul_l3net";
 
 static char *l3netIPaddr = "dmsb.l3net.%d.V4Addr";
 
@@ -1031,8 +1032,12 @@ int HandlePostConfigGeneric(bridgeDetails *bridgeInfo,int InstanceNumber)
                     			}
 					break;
 
-			case ETH_BACKHAUL:
-					break;	
+            case ETH_BACKHAUL:
+                if ( BridgeOprInPropgress == CREATE_BRIDGE )
+                {
+                    assignIpToBridge(bridgeInfo->bridgeName,EthBhaulL3Net);
+                }
+                break;	
 
             case MESH:
                     break;
@@ -1169,7 +1174,7 @@ int updateBridgeInfo(bridgeDetails *bridgeInfo, char* ifNameToBeUpdated, int Opr
 		{
             		retryCounter = 0;
 
-            		if ( (ethWanEnabled) && (if_type == OVS_ETH_IF_TYPE ) && ( strncmp(ethWanIfaceName,token,sizeof(ethWanIfaceName)-1) == 0 ))
+            		if ( (ethWanEnabled) && ((if_type == OVS_ETH_IF_TYPE) || (if_type == OVS_VLAN_IF_TYPE) ) && ( strncmp(ethWanIfaceName,token,sizeof(ethWanIfaceName)-1) == 0 ))
                 		continue;
 OVSACTION:
 			if ( 1 == ovsEnable )
@@ -2265,6 +2270,19 @@ void getSettings()
         {
         	bridge_util_log("syscfg_get failed to retrieve NonRootSupport\n");
         }
+
+        memset(buf,0,sizeof(buf));
+        if( 0 == syscfg_get( NULL, "eb_enable", buf, sizeof( buf ) ) )
+        {
+        	if ( strcmp (buf,"true") == 0 )
+                    eb_enable = 1;
+                else
+                    eb_enable = 0;
+        }
+        else
+        {
+        	bridge_util_log("syscfg_get failed to retrieve eb_enable\n");
+        }
         char paramName[256]={0};
 	int retPsmGet = CCSP_SUCCESS;
 	char *paramValue = NULL;
@@ -2452,20 +2470,39 @@ int main(int argc, char *argv[])
 		InstanceNumber = LOST_N_FOUND;
 		DeleteBrInterface();
 	}
-    	else if ( (strcmp(Cmd_Opr,"meshbhaul-setup") == 0 ) ) 
-    	{
-        	BridgeOprInPropgress = CREATE_BRIDGE;
-        	InstanceNumber = MESH_BACKHAUL;
-        	CreateBrInterface();
-    	}
-        else if ( (strcmp(Cmd_Opr,"add-port") == 0 ) ) 
+    else if ( (strcmp(Cmd_Opr,"meshbhaul-setup") == 0 ) ) 
+    {
+        BridgeOprInPropgress = CREATE_BRIDGE;
+        InstanceNumber = MESH_BACKHAUL;
+        CreateBrInterface();
+    }
+    else if ( (strcmp(Cmd_Opr, "meshethbhaul-up") == 0 ) )
+    {
+        if(eb_enable != 0)
         {
-            	AddOrDeletePort(argv[2],argv[3],OVS_IF_UP_CMD);
+            BridgeOprInPropgress = CREATE_BRIDGE;
+            InstanceNumber = ETH_BACKHAUL;
+            CreateBrInterface();
         }
-        else if ( (strcmp(Cmd_Opr,"del-port") == 0 ) ) 
+        else
         {
-            	AddOrDeletePort(argv[2],argv[3],OVS_BR_REMOVE_CMD);
+            bridge_util_log("Meshethbhaul not started as eb_enable is false\n");
         }
+    }
+    else if ( (strcmp(Cmd_Opr, "meshethbhaul-down") == 0 ) )
+    {
+        BridgeOprInPropgress = DELETE_BRIDGE;
+        InstanceNumber = ETH_BACKHAUL;
+        DeleteBrInterface();
+    }
+    else if ( (strcmp(Cmd_Opr,"add-port") == 0 ) ) 
+    {
+        AddOrDeletePort(argv[2],argv[3],OVS_IF_UP_CMD);
+    }
+    else if ( (strcmp(Cmd_Opr,"del-port") == 0 ) ) 
+    {
+        AddOrDeletePort(argv[2],argv[3],OVS_BR_REMOVE_CMD);
+    }
 	else
 	{
 		bridge_util_log("%s is invalid operation\n",Cmd_Opr);
