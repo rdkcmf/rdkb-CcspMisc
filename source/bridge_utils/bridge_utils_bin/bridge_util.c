@@ -67,12 +67,8 @@ static char *mocaIsolation = "dmsb.l2net.HomeNetworkIsolation";
 static char *mocaIsolationL3Net = "dmsb.MultiLAN.MoCAIsoLation_l3net";
 static char *LnFL3Net = "dmsb.MultiLAN.LnF_l3net";
 static char *MeshBhaulL3Net = "dmsb.MultiLAN.MeshBhaul_l3net";
-static char *MeshWiFiBhaulL3Net_2G = "dmsb.MultiLAN.MeshWiFiBhaul_2G_l3net";
-static char *MeshWiFiBhaulL3Net_5G = "dmsb.MultiLAN.MeshWiFiBhaul_5G_l3net";
 
 static char *l3netIPaddr = "dmsb.l3net.%d.V4Addr";
-
-static char *l3netSubnetMask = "dmsb.l3net.%d.V4SubnetMask";
 
 static char *g_Subsystem = "eRT." ;
 
@@ -269,10 +265,6 @@ int getMTU(int InstanceNumber)
 		case MESH:			
 
 		case MESH_BACKHAUL:
-
-		case MESH_WIFI_BACKHAUL_2G:
-
-		case MESH_WIFI_BACKHAUL_5G:
 					mtu = 1600 ;
 					break;	
 		case ETH_BACKHAUL:
@@ -850,13 +842,7 @@ int HandlePreConfigGeneric(bridgeDetails *bridgeInfo,int InstanceNumber)
 					break;
 
 		case ETH_BACKHAUL:
-					break;
-
-		case MESH_WIFI_BACKHAUL_2G:
-					break;
-
-		case MESH_WIFI_BACKHAUL_5G:
-					break;
+					break;	
 
 		default :
 					bridge_util_log("%s : Default case\n",__FUNCTION__); 
@@ -887,72 +873,51 @@ int HandlePreConfigGeneric(bridgeDetails *bridgeInfo,int InstanceNumber)
 
 void assignIpToBridge(char* bridgeName, char* l3netName)
 {
-    char paramName[256]={0};
-    int retPsmGet = CCSP_SUCCESS;
-    char *paramValue = NULL;
+        char paramName[256]={0};
+        int retPsmGet = CCSP_SUCCESS;
+        char *paramValue = NULL;
 
-    char ipaddr[64] = {0} ;
-    char subNetMask[64] = {0};
-    int L3NetIdx = 0;
-    snprintf(paramName,sizeof(paramName), l3netName);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, paramName, NULL, &paramValue);
-    if (retPsmGet == CCSP_SUCCESS)
-    {
-        bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
-        L3NetIdx = atoi(paramValue);
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
-        paramValue = NULL;
-    }
-    else
-    {
-        bridge_util_log("%s: psm call failed for %s, ret code %d\n", __func__, paramName, retPsmGet);
-        return;
-    }
-    memset(paramName,0,sizeof(paramName));
+        char ipaddr[64] = {0} ;
+        int L3NetIdx = 0;
+        snprintf(paramName,sizeof(paramName), l3netName);
+        retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, paramName, NULL, &paramValue);
+        if (retPsmGet == CCSP_SUCCESS) 
+        {
+                bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
+                L3NetIdx = atoi(paramValue);
+                ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
+                paramValue = NULL;
 
-    snprintf(paramName,sizeof(paramName), l3netIPaddr,L3NetIdx);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, paramName, NULL, &paramValue);
-    if (retPsmGet == CCSP_SUCCESS)
-    {
-        bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
-        strncpy(ipaddr,paramValue,sizeof(ipaddr)-1);
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
-        paramValue = NULL;
-    }
-    else
-    {
-      bridge_util_log("%s: psm call failed for %s, ret code %d\n", __func__, paramName, retPsmGet);
-      return;
-    }
-    memset(paramName,0,sizeof(paramName));
+        }
+        else
+        {
+                bridge_util_log("%s: psm call failed for %s, ret code %d\n", __func__, paramName, retPsmGet);
+                return;
 
-    snprintf(paramName,sizeof(paramName), l3netSubnetMask,L3NetIdx);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, paramName, NULL, &paramValue);
-    if (retPsmGet == CCSP_SUCCESS)
-    {
-        bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
-        strncpy(subNetMask,paramValue,sizeof(subNetMask)-1);
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
-        paramValue = NULL;
-    }
-    else
-    {
-        bridge_util_log("%s: psm call failed for %s, ret code %d\n", __func__, paramName, retPsmGet);
-    }
+        }
+        memset(paramName,0,sizeof(paramName)); 
 
-    char cmd[256] = {0} ;
-    if(subNetMask[0] != '\0')
-    {
-        bridge_util_log("%s : Assigning Ip %s with default subnetmask %s to bridge %s \n",__FUNCTION__,ipaddr,subNetMask, bridgeName);
-        snprintf(cmd,sizeof(cmd),"ifconfig %s %s netmask %s up",bridgeName,ipaddr, subNetMask);
-    }
-    else
-    {
-        bridge_util_log("%s : Assigning Ip %s to bridge %s \n",__FUNCTION__,ipaddr,bridgeName);
-        snprintf(cmd,sizeof(cmd),"ifconfig %s %s",bridgeName,ipaddr);
-    }
-    system(cmd);
-    return;
+        snprintf(paramName,sizeof(paramName), l3netIPaddr,L3NetIdx);
+        retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, paramName, NULL, &paramValue);
+        if (retPsmGet == CCSP_SUCCESS) 
+        {
+                bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
+                strncpy(ipaddr,paramValue,sizeof(ipaddr)-1);
+                ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
+                paramValue = NULL;
+
+        }
+        else
+        {
+                bridge_util_log("%s: psm call failed for %s, ret code %d\n", __func__, paramName, retPsmGet);
+                return;
+        }
+	char cmd[256] = {0} ;
+	bridge_util_log("%s : Assigning Ip %s to bridge %s \n",__FUNCTION__,ipaddr,bridgeName); 
+
+	snprintf(cmd,sizeof(cmd),"ifconfig %s %s",bridgeName,ipaddr);
+	system(cmd);
+	return;	
 }
 
 /*********************************************************************************************
@@ -1031,21 +996,6 @@ int HandlePostConfigGeneric(bridgeDetails *bridgeInfo,int InstanceNumber)
 
             case MESH:
                     break;
-
-			case MESH_WIFI_BACKHAUL_2G:
-				if ( BridgeOprInPropgress == CREATE_BRIDGE )
-				{
-					assignIpToBridge(bridgeInfo->bridgeName,MeshWiFiBhaulL3Net_2G);
-				}
-				break;
-
-			case MESH_WIFI_BACKHAUL_5G:
-				if ( BridgeOprInPropgress == CREATE_BRIDGE )
-				{
-					assignIpToBridge(bridgeInfo->bridgeName,MeshWiFiBhaulL3Net_5G);
-				}
-				break;
-
 			default :
 					bridge_util_log("%s : Default case\n",__FUNCTION__); 
 
