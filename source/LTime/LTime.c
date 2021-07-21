@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "platform_hal.h"
+#include <stdbool.h>
 #endif
 #define DATE_MAX_STR_SIZE 26
 //#define DATE_FMT "%FT%TZ%z"
@@ -31,27 +32,98 @@
 #define DATE_FMT_H "%H"
 #define DATE_FMT_M "%M"
 
+#ifdef UTC_ENABLE
+static int hexToInt(char s[])
+{
+    int hexdigit, i, num;
+    bool inputIsValid;
+    i=0;
+    if(s[i] == '0') {
+        ++i;
+        if(s[i] == 'x' || s[i] == 'X'){
+            ++i;
+        }
+    }
+    num = 0;
+    inputIsValid = true;
+    for(; inputIsValid == true; ++i) {
+        if(s[i] >= '0' && s[i] <= '9') {
+            hexdigit = s[i] - '0';
+        } else if(s[i] >= 'a' && s[i] <= 'f') {
+            hexdigit = s[i] - 'a' + 10;
+        } else if(s[i] >= 'A' && s[i] <= 'F') {
+            hexdigit = s[i] - 'A' + 10;
+        } else {
+            inputIsValid = false;
+        }
+        if(inputIsValid == true) {
+            num = 16 * num + hexdigit;
+        }
+    }
+    return num;
+}
+
+int getTimeOffsetFromSysevent(char *name, int version)
+{
+    char a[100];char cmd[100];
+    FILE *fp;
+    int off = -1;
+    snprintf(cmd,sizeof(cmd),"sysevent get %s",name);
+    fp = popen(cmd, "r");
+    if(fp != NULL)
+    {
+        fgets(a,sizeof(a),fp);
+        a[strlen(a) - 1] = '\0';
+        pclose(fp);
+        if(a[0] != '\0')
+        {
+            if(a[0] != '@')
+            {
+                if(version == 6)
+                    off = hexToInt(a);
+                else
+                    off = atoi(a);
+            }
+            else
+            {
+                off = atoi(a + 1);
+            }
+            return off;
+        }
+    }
+    return -1;
+}
+#endif
+
 time_t getOffset()
 {
     time_t off = 0;
 
 #ifdef UTC_ENABLE
-    char a[100];char cmd[100];
+    char a[100];
     char *pTimeOffset = a;
-    FILE *fp;
-    if(!access("/nvram/ETHWAN_ENABLE", 0))
+
+    if(access("/nvram/ETHWAN_ENABLE", 0))
     {
-	snprintf(cmd,sizeof(cmd),"sysevent get ipv4-timeoffset");
-	fp = popen(cmd, "r");
-	fgets(a,sizeof(a),fp);
-        pclose(fp);
-        off = atoi(a + 1);
+        if( platform_hal_getTimeOffSet(pTimeOffset) == RETURN_OK )
+	{
+            off = atoi(pTimeOffset);
+	    return off;
+	}
     }
-    else
+
+    off = getTimeOffsetFromSysevent("ipv6-timeoffset", 6);
+    if(off != -1)
     {
-    platform_hal_getTimeOffSet(pTimeOffset);
-    off = atoi(pTimeOffset);
+        return off;
     }
+
+    off = getTimeOffsetFromSysevent("ipv4-timeoffset", 4);
+    if(off != -1)
+    {
+        return off;
+    }
+
 #endif
     return off;
 }
