@@ -65,7 +65,6 @@ static char *l2netVlanMembers = "dmsb.l2net.%d.Members.VlanInterface";
 static char *mocaIsolation = "dmsb.l2net.HomeNetworkIsolation";
 
 static char *mocaIsolationL3Net = "dmsb.MultiLAN.MoCAIsoLation_l3net";
-static char *primaryL3Net = "dmsb.MultiLAN.PrimaryLAN_l3net";
 static char *LnFL3Net = "dmsb.MultiLAN.LnF_l3net";
 static char *MeshBhaulL3Net = "dmsb.MultiLAN.MeshBhaul_l3net";
 static char *MeshWiFiBhaulL3Net_2G = "dmsb.MultiLAN.MeshWiFiBhaul_2G_l3net";
@@ -337,7 +336,7 @@ void enableMoCaIsolationSettings (bridgeDetails *bridgeInfo)
 
 	char cmd[4096] = {0} ;
 	char ipaddr[64] = {0} ;
-	int primaryL3netIdx = 0 ,  mocaIsolationL3NetIdx = 0;
+	int  mocaIsolationL3NetIdx = 0;
 
 	snprintf(paramName,sizeof(paramName), mocaIsolationL3Net);
 	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, paramName, NULL, &paramValue);
@@ -371,26 +370,11 @@ void enableMoCaIsolationSettings (bridgeDetails *bridgeInfo)
     		bridge_util_log("%s: psm call failed for %s, ret code %d\n", __func__, paramName, retPsmGet);
 
     	}
+
+
 	memset(paramName,0,sizeof(paramName)); 
 
-	snprintf(paramName,sizeof(paramName), primaryL3Net);
-	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, paramName, NULL, &paramValue);
-	if (retPsmGet == CCSP_SUCCESS) 
-	{
-		bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
-		primaryL3netIdx = atoi(paramValue);
-		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
-		paramValue = NULL;
-
-	}
-    	else
-    	{
-    		bridge_util_log("%s: psm call failed for %s, ret code %d\n", __func__, paramName, retPsmGet);
-
-   	}
-	memset(paramName,0,sizeof(paramName)); 
-
-	snprintf(paramName,sizeof(paramName), l2netBridgeName,primaryL3netIdx);
+	snprintf(paramName,sizeof(paramName), l2netBridgeName,PRIVATE_LAN);
 	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, paramName, NULL, &paramValue);
 	if (retPsmGet == CCSP_SUCCESS) 
 	{
