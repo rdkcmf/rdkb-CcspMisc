@@ -16,30 +16,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-if CCSP_ARCH_ARM
-if NOTIFYLEASE_ENABLE
-NOTIFY = Notify_Lease
-endif
-endif
+AM_CFLAGS = -D_ANSC_LINUX
+AM_CFLAGS += -D_ANSC_USER
+AM_CFLAGS += -D_ANSC_LITTLE_ENDIAN_
+AM_CFLAGS += -D_CCSP_CWMP_TCP_CONNREQ_HANDLER
+AM_CFLAGS += -D_ANSC_IPV6_COMPATIBLE_
+AM_CFLAGS += -DBUILD_WEB
+AM_LDFLAGS =
+AM_LDFLAGS += -lhal_platform
+AM_LDFLAGS += -lz
 
-if SETLED_ENABLE
-SETLED = SetLED
-endif
+AM_CPPFLAGS = -Wall -Werror
+ACLOCAL_AMFLAGS = -I m4
+hardware_platform = i686-linux-gnu
 
-if WEBCFG_TESTAPP_ENABLE
-WBCFG_TEST = wbCfgTestDaemon wbCfgTestApp
-endif
+lib_LTLIBRARIES = libdhcp_client_utils.la
+libdhcp_client_utils_la_SOURCES = dhcpv4_client_utils.c udhcpc_client_utils.c dhcpv6_client_utils.c dibbler_client_utils.c
+libdhcp_client_utils_la_LDFLAGS = -lhal_platform -lsysevent -lsyscfg
 
-if MULTIPART_UTIL_ENABLE
-MULTIPART_UTIL = multipartRoot
-endif
-
-if BRIDGE_UTILS_BIN_ENABLE
-BRIDGE_UTIL = bridge_utils
-endif
-
-SUBDIRS = Psmcli parcon LTime TimeConv webcfg_decoder MemFrag_Calc $(SETLED) $(MULTIPART_UTIL) $(BRIDGE_UTIL) $(WBCFG_TEST) dhcp_client_utils
-
-if WITH_GTEST_SUPPORT
-SUBDIRS += test
-endif
