@@ -60,7 +60,6 @@ static char *l2netMocaMembers = "dmsb.l2net.%d.Members.Moca";
 static char *l2netGreMembers = "dmsb.l2net.%d.Members.Gre";
 static char *l2netWiFiMembers = "dmsb.l2net.%d.Members.WiFi";
 static char *l2netLinkMembers = "dmsb.l2net.%d.Members.Link";
-static char *l2netVlanMembers = "dmsb.l2net.%d.Members.VlanInterface";
 
 static char *mocaIsolation = "dmsb.l2net.HomeNetworkIsolation";
 
@@ -636,23 +635,6 @@ int getIfList(bridgeDetails *bridgeInfo)
     {
 		bridge_util_log("%s: psm call failed for %s, ret code %d\n", __func__, paramName, retPsmGet);
     }
-    memset(paramName,0,sizeof(paramName)); 
-
-    snprintf(paramName,sizeof(paramName), l2netVlanMembers, InstanceNumber);
-    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, paramName, NULL, &paramValue);
-    if (retPsmGet == CCSP_SUCCESS) 
-    {
-	        bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
-	        
-	        strncpy(bridgeInfo->VlanIfList,paramValue,sizeof(bridgeInfo->VlanIfList)-1);
-	        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
-	        paramValue = NULL;
-
-    }
-    else
-    {
-		bridge_util_log("%s: psm call failed for %s, ret code %d\n", __func__, paramName, retPsmGet);
-    }
 
      return 0;
 }
@@ -1064,16 +1046,6 @@ int updateBridgeInfo(bridgeDetails *bridgeInfo, char* ifNameToBeUpdated, int Opr
 				if_type = OVS_VLAN_IF_TYPE ;
 				vlanId = bridgeInfo->vlanID ;
 				break;
-		case IF_VLAN_LIST_BRIDGEUTIL: 
-                		if ( bridgeInfo->VlanIfList[0] != '\0' )
-                		{
-                        		strncpy(IfList_Copy,bridgeInfo->VlanIfList,sizeof(IfList_Copy)-1);
-                		}
-
-				if_type = OVS_VLAN_IF_TYPE ;
-				vlanId = bridgeInfo->vlanID ;
-
-				break;
 		case IF_WIFI_BRIDGEUTIL:
                 		if ( bridgeInfo->WiFiIfList[0] != '\0' )
                 		{
@@ -1252,12 +1224,6 @@ int CreateBrInterface()
 	snprintf(event_name,sizeof(event_name),"multinet_%d-vid",InstanceNumber);
 	snprintf(val,sizeof(val),"%d",bridgeInfo->vlanID);
 	sysevent_set(syseventfd_vlan, sysevent_token_vlan, event_name, val, 0);
-
-    	if ( bridgeInfo->VlanIfList[0] != '\0' )
-    	{
-                bridgeCreated = 1 ;
-		updateBridgeInfo(bridgeInfo,"",OVS_IF_UP_CMD,IF_VLAN_LIST_BRIDGEUTIL); 				
-    	}
 				
 	if ( bridgeInfo->vlan_name[0] != '\0' )
     	{
@@ -1359,11 +1325,6 @@ int DeleteBrInterface()
 
 	HandlePreConfigGeneric(bridgeInfo,InstanceNumber);
 	HandlePreConfigVendor(bridgeInfo,InstanceNumber);
-            
-  	if ( bridgeInfo->VlanIfList[0] != '\0' )
-        {
-                updateBridgeInfo(bridgeInfo,"",OVS_IF_DELETE_CMD,IF_VLAN_LIST_BRIDGEUTIL);              
-        }
                 
        	if ( bridgeInfo->vlan_name[0] != '\0' )
         {
@@ -1541,24 +1502,6 @@ void removeIfaceFromBridge(bridgeDetails *bridgeInfo,char *current_if_list)
 	while ((token_curlist = strtok_r(rest_curlist, " ", &rest_curlist))) 
 	{
 		removeIface = 1 ;
-		if ( bridgeInfo->VlanIfList[0] != '\0' )
-    		{
-    			strncpy(IfList_Copy,bridgeInfo->VlanIfList,sizeof(IfList_Copy)-1);
-
-		    	//rest_newlist = bridgeInfo->VlanIfList; 
-			rest_newlist = IfList_Copy;
-			while ((token_newlist = strtok_r(rest_newlist, " ", &rest_newlist))) 
-			{
-				memset(lIfName,0,sizeof(lIfName));
-				snprintf(lIfName,sizeof(lIfName),"%s.%d",token_newlist,bridgeInfo->vlanID);
-
-				if ( strcmp(lIfName,token_curlist) == 0)
-				{
-					removeIface = 0; 
-					goto IF_REMOVE;
-				}
-			}  
-    		}
 
 		if ( bridgeInfo->vlan_name[0] != '\0' )
     		{
@@ -1711,42 +1654,6 @@ void addIfaceToBridge(bridgeDetails *bridgeInfo,char *current_if_list)
 
 	char IfList_Copy[IFLIST_SIZE] = {0} ;
 	char currentIfListCopy[TOTAL_IFLIST_SIZE] = {0} ;
-
-	if ( bridgeInfo->VlanIfList[0] != '\0' )
-    	{
-
-    		strncpy(IfList_Copy,bridgeInfo->VlanIfList,sizeof(IfList_Copy)-1);
-
-		//rest_newlist = bridgeInfo->VlanIfList; 
-    		rest_newlist = IfList_Copy ;
-		while ((token_newlist = strtok_r(rest_newlist, " ", &rest_newlist))) 
-		{
-			addIface = 1 ;
-			memset(lIfName,0,sizeof(lIfName));
-			snprintf(lIfName,sizeof(lIfName),"%s.%d",token_newlist,bridgeInfo->vlanID);
-
-			strncpy(currentIfListCopy,current_if_list,sizeof(IfList_Copy)-1);
-
-			rest_curlist = currentIfListCopy ;
-
-			while ((token_curlist = strtok_r(rest_curlist, " ", &rest_curlist))) 
-			{
-				if ( strcmp(lIfName,token_curlist) == 0)
-				{
-					addIface = 0; 
-					break;
-				}
-
-			}
-
-			if (addIface == 1)
-			{
-				updateBridgeInfo(bridgeInfo,token_newlist,OVS_IF_UP_CMD,IF_VLAN_LIST_BRIDGEUTIL); 				
-
-			}
-		}  
-		
-    	}
 
 	if ( bridgeInfo->vlan_name[0] != '\0' )
     	{
