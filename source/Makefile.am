@@ -16,10 +16,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-if CCSP_ARCH_ARM
 if NOTIFYLEASE_ENABLE
 NOTIFY = Notify_Lease
-endif
 endif
 
 if SETLED_ENABLE

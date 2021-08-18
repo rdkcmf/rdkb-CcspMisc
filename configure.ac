@@ -43,38 +43,6 @@ AM_CONDITIONAL([WITH_GTEST_SUPPORT], [test x$GTEST_SUPPORT_ENABLED = xtrue])
 AC_PREFIX_DEFAULT(`pwd`)
 AC_ENABLE_SHARED
 AC_DISABLE_STATIC
-# Specify ccsp cpu arch
-
-AC_ARG_WITH([ccsp-arch],
-[AC_HELP_STRING([--with-ccsp-arch={arm,atom,pc,mips}],
-                [specify the ccsp board CPU platform])],
-[case x"$withval" in
-   xarm)
-     CCSP_ARCH=arm
-     ;;
-   xatom)
-     CCSP_ARCH=atom
-     ;;
-   xpc)
-     CCSP_ARCH=pc
-     ;;
-   xmips)
-     CCSP_ARCH=mips
-     ;;
-   *)
-     AC_MSG_ERROR([$withval is an invalid option to --with-ccsp-arch])
-     ;;
- esac],
-[CCSP_ARCH=''])
-if test x"${CCSP_ARCH}" != x; then
-  AC_DEFINE_UNQUOTED(CCSP_ARCH, "$CCSP_ARCH",
-                     [The board CPU architecture])
-fi
-
-AM_CONDITIONAL(CCSP_ARCH_ARM, test "x$CCSP_ARCH" = xarm)
-AM_CONDITIONAL(CCSP_ARCH_ATOM, test "x$CCSP_ARCH" = xatom)
-AM_CONDITIONAL(CCSP_ARCH_PC, test "x$CCSP_ARCH" = xpc)
-AM_CONDITIONAL(CCSP_ARCH_MIPS, test "x$CCSP_ARCH" = xmips)
 
 AC_ARG_ENABLE([notifylease],
 [  --enable-notifylease    Turn on leasenotify ],
@@ -150,8 +118,7 @@ AC_CONFIG_FILES(
 	Makefile
 )
 
-AM_COND_IF([NOTIFYLEASE_ENABLE], [AM_COND_IF([CCSP_ARCH_ARM],
-           [AC_CONFIG_FILES([source/Notify_Lease/Makefile])])], [])
+AM_COND_IF([NOTIFYLEASE_ENABLE], [AC_CONFIG_FILES([source/Notify_Lease/Makefile])])
 
 AM_COND_IF([SETLED_ENABLE], [AC_CONFIG_FILES([source/SetLED/Makefile])])
 
