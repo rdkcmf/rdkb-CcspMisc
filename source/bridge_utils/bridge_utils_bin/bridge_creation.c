@@ -156,10 +156,9 @@ bool brctl_interact(ovs_interact_request *request)
 		}
 		else if ( OVS_IF_UP_CMD == gw_config->if_cmd )
 		{
-
 			if ( gw_config->parent_bridge[0] != '\0' )
 			{
-				snprintf(cmd,sizeof(cmd),"check_bridge=`brctl show | grep %s` ;\
+				snprintf(cmd,sizeof(cmd),"check_bridge=`brctl show %s` ;\
 					if [ \"$check_bridge\" = \"\" ];\
 					then \
 						brctl addbr %s ;\
