@@ -112,7 +112,7 @@ static int getLocalTimeStr(char *pTime,char *pDate)
 
    time(&now_time);
    now_time = now_time + getOffset();
-   localtime_r(&now_time, &now_tm_local);
+   gmtime_r(&now_time, &now_tm_local); // already adjusted for TZ with offset
    /* human readable */
    strftime(str_local, DATE_MAX_STR_SIZE, DATE_FMT, &now_tm_local);
    strftime(str_date, DATE_MAX_STR_SIZE, DATE_FMT_2, &now_tm_local);
@@ -260,7 +260,7 @@ int ConvLocalToUTC(char* LocalTime, char* UtcTime)
    time_t t = mktime(&cal);
    t = t - getOffset();
    // Convert time_t to localtime
-   localtime_r(&t, &now_tm_utc);
+   gmtime_r(&t, &now_tm_utc); // already adjusted for TZ with offset
    /* human readable */
    strftime(UtcTime, DATE_MAX_STR_SIZE, DATE_FMT_1, &now_tm_utc);
    strftime(UtcDate, DATE_MAX_STR_SIZE, DATE_FMT_2, &now_tm_utc);
@@ -421,7 +421,7 @@ int ConvUTCToLocal( char* UtcTime, char* LocalTime)
    time_t t = mktime(&cal);
    t = t + getOffset();
    // Convert time_t to localtime
-   localtime_r(&t, &now_tm_utc);
+   gmtime_r(&t, &now_tm_utc); // already adjusted for TZ with offset
    /* human readable */
     strftime(LocalTime, DATE_MAX_STR_SIZE, DATE_FMT_1, &now_tm_utc);
     strftime(LDate, DATE_MAX_STR_SIZE, DATE_FMT_2, &now_tm_utc);

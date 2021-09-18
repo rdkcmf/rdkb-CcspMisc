@@ -137,7 +137,7 @@ int main( int argc, char *argv[]) {
     
     time(&now_time);
     now_time_local =  now_time + off;
-    localtime_r(&now_time_local, &now_tm_local);
+    gmtime_r(&now_time_local, &now_tm_local); // already adjusted for TZ with offset
     
      if( argc == 2 ) {
           if(argv[1][0] == 'H')
