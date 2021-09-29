@@ -20,7 +20,7 @@
 #include "bridge_util.h"
 
 #include "bridge_creation.h"
-
+#include <unistd.h>
 #include "cap.h"
 
 #ifdef INCLUDE_BREAKPAD
@@ -34,6 +34,7 @@ static cap_user   appcaps;
 
 int InstanceNumber = 0; 
 int DeviceMode = 0, ovsEnable = 0 , bridgeUtilEnable = 0 , skipWiFi=0 , skipMoCA = 0 , ethWanEnabled =0 , PORT2ENABLE = 0; // router = 0, bridge = 2
+int wan_mode = 0;
 char Cmd_Opr[32] = {0};
 char primaryBridgeName[64] = {0} , ethWanIfaceName[64] ={0} ;
 // It confirms whether the opeartion is to create the bridge or to remove the bridge
@@ -61,6 +62,7 @@ static char *l2netGreMembers = "dmsb.l2net.%d.Members.Gre";
 static char *l2netWiFiMembers = "dmsb.l2net.%d.Members.WiFi";
 static char *l2netLinkMembers = "dmsb.l2net.%d.Members.Link";
 
+static char *l2netEthWanInterface = "dmsb.l2net.EthWanInterface";
 static char *mocaIsolation = "dmsb.l2net.HomeNetworkIsolation";
 
 static char *mocaIsolationL3Net = "dmsb.MultiLAN.MoCAIsoLation_l3net";
@@ -812,6 +814,27 @@ int HandlePreConfigGeneric(bridgeDetails *bridgeInfo,int InstanceNumber)
 					}
 					break ;
 		case PRIVATE_LAN:
+                    {
+#ifdef AUTOWAN_ENABLE
+                        int isEthWanInterfaceRemove = 0;
+                        if (ethWanEnabled)
+                        {
+                            isEthWanInterfaceRemove = 1;
+                        }
+                        if (!wan_mode)
+                        {
+                            if ((0 != access( "/tmp/autowan_iface_finalized" , F_OK ))) 
+                            {
+                                isEthWanInterfaceRemove = 1;
+                            }
+                        }
+
+                        if((isEthWanInterfaceRemove) && (strlen(ethWanIfaceName) > 1))
+                        {
+                            removeIfaceFromList(bridgeInfo->ethIfList,ethWanIfaceName);
+                        }
+#endif
+                    }
 					break;
 
 		case HOME_SECURITY:
@@ -2146,6 +2169,17 @@ int ExitFunc()
 void getSettings()
 {
         char buf[ 8 ] = { 0 };
+        if( 0 == syscfg_get( NULL, "selected_wan_mode", buf, sizeof( buf ) ) )
+        {
+        	wan_mode = atoi(buf);
+        }
+        else
+        {
+        	bridge_util_log("syscfg_get failed to retrieve wan selected mode\n");
+
+        }
+
+
         if( 0 == syscfg_get( NULL, "bridge_mode", buf, sizeof( buf ) ) )
         {
         	DeviceMode = atoi(buf);
@@ -2195,23 +2229,27 @@ void getSettings()
         }
         
         memset(buf,0,sizeof(buf));
+
+        memset(ethWanIfaceName,0,sizeof(ethWanIfaceName));
+        if( 0 == syscfg_get( NULL, "eth_wan_iface_name", ethWanIfaceName, sizeof( ethWanIfaceName ) ) )
+        {
+            bridge_util_log("ethWanIfaceName is %s\n",ethWanIfaceName);
+        }
+        else
+        {
+            bridge_util_log("syscfg_get failed to retrieve ethWanIfaceName\n");
+        }
+
         if( 0 == syscfg_get( NULL, "eth_wan_enabled", buf, sizeof( buf ) ) )
         {
                 if ( strcmp (buf,"true") == 0 )
                 {
                     	ethWanEnabled = 1;
-
-                    	if( 0 == syscfg_get( NULL, "eth_wan_iface_name", ethWanIfaceName, sizeof( ethWanIfaceName ) ) )
-                    	{
-                        	bridge_util_log("ethWanIfaceName is %s\n",ethWanIfaceName);
-                    	}
-                    	else
-                    	{
-                        	bridge_util_log("syscfg_get failed to retrieve ethWanIfaceName\n");
-                    	}
                 }
-                else 
+                else
+                {
                     	ethWanEnabled = 0;   
+                }
         }
         else
         {
@@ -2231,6 +2269,28 @@ void getSettings()
         char paramName[256]={0};
 	int retPsmGet = CCSP_SUCCESS;
 	char *paramValue = NULL;
+
+    //read from psm if not available in syscfg db.
+    if(ethWanIfaceName[0] == '\0')
+    {
+        memset(paramName,0,sizeof(paramName));
+
+        snprintf(paramName,sizeof(paramName), l2netEthWanInterface);
+        retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, paramName, NULL, &paramValue);
+        if (retPsmGet == CCSP_SUCCESS)
+        {
+            bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
+
+            strncpy(ethWanIfaceName,paramValue,sizeof(ethWanIfaceName)-1);
+            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
+            paramValue = NULL;
+        }
+        else
+        {
+            bridge_util_log("%s: psm call failed for %s, ret code %d\n", __func__, paramName, retPsmGet);
+
+        }
+    }
 
 	snprintf(paramName,sizeof(paramName), mocaIsolation);
 	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, paramName, NULL, &paramValue);
