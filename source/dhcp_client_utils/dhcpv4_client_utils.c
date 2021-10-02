@@ -23,246 +23,29 @@
 #include <string.h>
 
 /*
- * freeArgs ()
- * @description: This function is a utility call to free the input array after execution of execv() call.
- * @params     : argv - output array to free()
- * @return     : no return
- *
- */
-static void freeArgs(char **argv)
-{
-   int  i=0;
-   while (argv[i] != NULL)
-   {
-     if ((argv[i]) != NULL)
-     {
-         free((argv[i]));
-         (argv[i]) = NULL;
-      }
-      i++;
-   }
-
-   if (argv != NULL)
-   {
-      free(argv);
-      argv = NULL;
-   }
-}
-
-/*
- * parseArgs ()
- * @description: This function is a utility call to construct an array to pass to execv() call.
- * @params     : cmd - input program to run eg: "/sbin/udhcpc"
- *               args - input arguments to pass to the program eg: "-i erouter0"
- *               argv - output array to pass to execv() call
+ * start_exe ()
+ * @description: This function start udhcpc client program and return pid.
+ * @params     : exe - program to run eg: "udhcpc"
  * @return     : returns the pid of the program started.
  *
  */
-
-static int parseArgs(const char *cmd, const char *args, char ***argv)
+int start_exe(char * cmd)
 {
-    int numArgs=3, i, len, argIndex=0;
-    bool inSpace= TRUE;
-    const char *cmdStr;
-    char **array;
 
-    len = (args == NULL) ? 0 : strlen(args);
-
-    for (i=0; i < len; i++)
+    if (cmd == NULL)
     {
-        if ((args[i] == ' ') && (!inSpace))
-        {
-            numArgs++;
-            inSpace = TRUE;
-        }
-        else
-        {
-            inSpace = FALSE;
-        }
-    }
-
-    array = (char **) malloc ((numArgs) * sizeof(char *));
-    if (array == NULL)
-    {
-        return -1;
-    }
-
-    /* locate the command name, last part of string */
-    cmdStr = strrchr(cmd, '/');
-    if (cmdStr == NULL)
-    {
-        cmdStr = cmd;
-    }
-    else
-    {
-        cmdStr++;
-    }
-
-    array[argIndex] = calloc (1, strlen(cmdStr) + 1);
-
-    if (array[argIndex] == NULL)
-    {
-        DBG_PRINT("memory allocation of %d failed", strlen(cmdStr) + 1);
-        freeArgs(array);
+        DBG_PRINT("%s %d: Invalid args..\n", __FUNCTION__, __LINE__);
         return FAILURE;
     }
-    else
+
+    // run the client program
+    if (system(cmd) == -1)
     {
-        strcpy(array[argIndex], cmdStr);
-        argIndex++;
+        DBG_PRINT("%s %d: system() call failed due to %s\n", __FUNCTION__, __LINE__, strerror(errno));
+        return FAILURE;
     }
-
-    inSpace = TRUE;
-    for (i=0; i < len; i++)
-    {
-        if ((args[i] == ' ') && (!inSpace))
-        {
-            numArgs++;
-            inSpace = TRUE;
-        }
-        else if ((args[i] != ' ') && (inSpace))
-        {
-            int startIndex, endIndex;
-
-            startIndex = i;
-            endIndex = i;
-            while ((endIndex < len) && (args[endIndex] != ' '))
-            {
-                endIndex++;
-            }
-
-            array[argIndex] = calloc(1,endIndex - startIndex + 1);
-            if (array[argIndex] == NULL)
-            {
-                DBG_PRINT("memory allocation of %d failed", endIndex - startIndex + 1);
-                freeArgs(array);
-                return FAILURE;
-            }
-
-            memcpy(array[argIndex], &args[startIndex], endIndex - startIndex );
-
-            argIndex++;
-
-            inSpace = FALSE;
-        }
-    }
-    array[argIndex] = NULL;
-    (*argv) = array;
 
     return SUCCESS;
-}
-
-/*
- * start_exe ()
- * @description: This function start udhcpc client program or any other executable and return pid.
- * @params     : exe - program to run eg: "udhcpc"
- *               args - arguments to pass to the program eg: "-i erouter0"
- * @return     : returns the pid of the program started.
- *
- */
-pid_t start_exe(char * exe, char * args)
-{
-    int32_t pid = 0;
-    char **argv = NULL;
-    int ret = SUCCESS;
-
-    if ((exe == NULL) && (args == NULL))
-    {
-        DBG_PRINT("%s %d: Invalid arguments..\n", __FUNCTION__, __LINE__);
-        return pid;
-    }
-
-    DBG_PRINT("buff %s.\n", args);
-
-    if ((ret = parseArgs(exe, args, &argv)) != SUCCESS)
-    {
-        DBG_PRINT("Failed to parse arguments %d\n",ret);
-        return pid;
-    }
-
-    if (signal(SIGCHLD, SIG_IGN) == SIG_ERR)
-    {
-        DBG_PRINT("ERROR: Couldn't set SIGCHLD handler!\n");
-        return pid;
-    }
-
-    pid = fork();
-    if (pid == 0)
-    {
-        int32_t devNullFd=-1, fd;
-
-        /*
-         * This is the child.
-         */
-
-        devNullFd = open("/dev/null", O_RDWR);
-        if (devNullFd == -1)
-        {
-            DBG_PRINT("open of /dev/null failed");
-            exit(-1);
-        }
-
-        close(0);
-        fd = devNullFd;
-        dup2(fd, 0);
-
-        close(1);
-        fd = devNullFd;
-        dup2(fd, 1);
-
-        close(2);
-        fd = devNullFd;
-        dup2(fd, 2);
-
-        if (devNullFd != -1)
-        {
-            close(devNullFd);
-        }
-
-        signal(SIGHUP, SIG_DFL);
-        signal(SIGINT, SIG_DFL);
-        signal(SIGQUIT, SIG_DFL);
-        signal(SIGILL, SIG_DFL);
-        signal(SIGTRAP, SIG_DFL);
-        signal(SIGABRT, SIG_DFL);  /* same as SIGIOT */
-        signal(SIGQUIT, SIG_DFL);
-        signal(SIGILL, SIG_DFL);
-        signal(SIGTRAP, SIG_DFL);
-        signal(SIGABRT, SIG_DFL);  /* same as SIGIOT */
-        signal(SIGFPE, SIG_DFL);
-        signal(SIGBUS, SIG_DFL);
-        signal(SIGSEGV, SIG_DFL);
-        signal(SIGSYS, SIG_DFL);
-        signal(SIGPIPE, SIG_DFL);
-        signal(SIGALRM, SIG_DFL);
-        signal(SIGTERM, SIG_DFL);
-        signal(SIGUSR1, SIG_DFL);
-        signal(SIGUSR2, SIG_DFL);
-        signal(SIGCHLD, SIG_DFL);  /* same as SIGCLD */
-        signal(SIGPWR, SIG_DFL);
-        signal(SIGWINCH, SIG_DFL);
-        signal(SIGURG, SIG_DFL);
-        signal(SIGIO, SIG_DFL);    /* same as SIGPOLL */
-        signal(SIGSTOP, SIG_DFL);
-        signal(SIGTSTP, SIG_DFL);
-        signal(SIGCONT, SIG_DFL);
-        signal(SIGTTIN, SIG_DFL);
-        signal(SIGTTOU, SIG_DFL);
-        signal(SIGVTALRM, SIG_DFL);
-        signal(SIGPROF, SIG_DFL);
-        signal(SIGXCPU, SIG_DFL);
-        signal(SIGXFSZ, SIG_DFL);
-
-        int err = execv(exe, argv);
-
-        /* We should not reach this line.  If we do, exec has failed. */
-        DBG_PRINT("%s %d: execv returned %d failed due to %s.\n", __FUNCTION__, __LINE__, err, strerror(errno));
-        exit(-1);
-    }
-
-    freeArgs(argv);
-
-    return pid;
 }
 
 #if DHCPV4_CLIEN_TI_UDHCPC

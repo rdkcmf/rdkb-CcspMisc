@@ -17,13 +17,7 @@
  * limitations under the License.
  */
 
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include<string.h>
-#include "dhcp_client_utils.h"
 #include "dibbler_client_utils.h"
-#include <sysevent/sysevent.h>
 
 #ifdef DHCPV6_CLIENT_DIBBLER
 
@@ -33,106 +27,30 @@
 extern token_t dhcp_sysevent_token;
 extern int dhcp_sysevent_fd;
 
-
 /*
- * start_process ()
- * @description: This function start dibbler client program or any other executable and return pid.
- * @params     : exe - program to run eg: "dibbler-client"
- * @return     : returns the pid of the program started.
+ * return_dibbler_pid ()
+ * @description: This function will return the pid of the dibbler-client process
+ * @return     : returns a pid of runnning dibbler-client
  *
  */
-static pid_t start_process(char * exe)
+static pid_t return_dibbler_pid ()
 {
-    int32_t pid = 0;
+    pid_t pid = 0;
+    FILE * pidfile_fd = NULL;
 
-    if ((exe == NULL))
+    pidfile_fd = fopen(DIBBLER_CLIENT_PIDFILE, "r");
+
+    if (pidfile_fd == NULL)
     {
-        DBG_PRINT("%s %d: Invalid arguments..\n", __FUNCTION__, __LINE__);
+        DBG_PRINT("%s %d: Unable to open pidfile: %s due to errorno: %s\n", __FUNCTION__, __LINE__, DIBBLER_CLIENT_PIDFILE, strerror(errno));
         return pid;
     }
 
-    char *const parmList[] = {exe, "start", NULL};
+    fscanf(pidfile_fd, "%d", &pid);
 
-    if (signal(SIGCHLD, SIG_IGN) == SIG_ERR)
-    {
-        DBG_PRINT("ERROR: Couldn't set SIGCHLD handler!\n");
-        return pid;
-    }
-
-    pid = fork();
-    if (pid == 0)
-    {
-        int32_t devNullFd=-1, fd;
-
-        /*
-         * This is the child.
-         */
-        devNullFd = open("/dev/null", O_RDWR);
-        if (devNullFd == -1)
-        {
-            DBG_PRINT("open of /dev/null failed");
-            exit(-1);
-        }
-
-        close(0);
-        fd = devNullFd;
-        dup2(fd, 0);
-
-        close(1);
-        fd = devNullFd;
-        dup2(fd, 1);
-
-        close(2);
-        fd = devNullFd;
-        dup2(fd, 2);
-
-        if (devNullFd != -1)
-        {
-            close(devNullFd);
-        }
-
-        signal(SIGHUP, SIG_DFL);
-        signal(SIGINT, SIG_DFL);
-        signal(SIGQUIT, SIG_DFL);
-        signal(SIGILL, SIG_DFL);
-        signal(SIGTRAP, SIG_DFL);
-        signal(SIGABRT, SIG_DFL);  /* same as SIGIOT */
-        signal(SIGQUIT, SIG_DFL);
-        signal(SIGILL, SIG_DFL);
-        signal(SIGTRAP, SIG_DFL);
-        signal(SIGABRT, SIG_DFL);  /* same as SIGIOT */
-        signal(SIGFPE, SIG_DFL);
-        signal(SIGBUS, SIG_DFL);
-        signal(SIGSEGV, SIG_DFL);
-        signal(SIGSYS, SIG_DFL);
-        signal(SIGPIPE, SIG_DFL);
-        signal(SIGALRM, SIG_DFL);
-        signal(SIGTERM, SIG_DFL);
-        signal(SIGUSR1, SIG_DFL);
-        signal(SIGUSR2, SIG_DFL);
-        signal(SIGCHLD, SIG_DFL);  /* same as SIGCLD */
-        signal(SIGPWR, SIG_DFL);
-        signal(SIGWINCH, SIG_DFL);
-        signal(SIGURG, SIG_DFL);
-        signal(SIGIO, SIG_DFL);    /* same as SIGPOLL */
-        signal(SIGSTOP, SIG_DFL);
-        signal(SIGTSTP, SIG_DFL);
-        signal(SIGCONT, SIG_DFL);
-        signal(SIGTTIN, SIG_DFL);
-        signal(SIGTTOU, SIG_DFL);
-        signal(SIGVTALRM, SIG_DFL);
-        signal(SIGPROF, SIG_DFL);
-        signal(SIGXCPU, SIG_DFL);
-        signal(SIGXFSZ, SIG_DFL);
-
-        int err = execv(exe, parmList);
-
-        /* We should not reach this line.  If we do, exec has failed. */
-        DBG_PRINT("%s %d: execv returned %d failed due to %s.\n", __FUNCTION__, __LINE__, err, strerror(errno));
-        exit(-1);
-    }
-
+    DBG_PRINT("%s %d: pid of dibbler is %d.\n", __FUNCTION__, __LINE__, pid);
     return pid;
+
 }
 static void convert_option16_to_hex(char **optionVal)
 {
@@ -232,12 +150,9 @@ static int dibbler_get_options (dhcp_opt_list * req_opt_list, dhcp_opt_list * se
                         }
                         else if (opt_list->dhcp_opt == DHCPV6_OPT_95)
                         {
-                            sysevent_get(dhcp_sysevent_fd, dhcp_sysevent_token, "mapt_config_flag", mapt_config, sizeof(mapt_config));
-                            if (strncmp(mapt_config, "true", 4) == 0)
-                            {
-                                snprintf (args, BUFLEN_128, "\n        option 00%d hex \n", opt_list->dhcp_opt);
-                                fputs(args, fout);
-                            }
+                            /* To add RFC.Feature.MAP-T.Enable flag checking */
+                            snprintf (args, BUFLEN_128, "\n        option 00%d hex \n", opt_list->dhcp_opt);
+                            fputs(args, fout);
                         }
                         else
                         {
@@ -302,6 +217,7 @@ static int dibbler_get_options (dhcp_opt_list * req_opt_list, dhcp_opt_list * se
 
 }
 
+
 /*
  * dibbler_get_other_args ()
  * @description: This function will construct a buffer with all other dibbler options
@@ -326,7 +242,6 @@ static int dibbler_get_other_args (dhcp_params * params)
  */
 pid_t start_dibbler (dhcp_params * params, dhcp_opt_list * req_opt_list, dhcp_opt_list * send_opt_list)
 {
-    pid_t pid = 0;
 
     if (params == NULL)
     {
@@ -338,19 +253,23 @@ pid_t start_dibbler (dhcp_params * params, dhcp_opt_list * req_opt_list, dhcp_op
     if (dibbler_get_options(req_opt_list,send_opt_list) != SUCCESS)
     {
         DBG_PRINT("%s %d: Unable to get DHCPv6 REQ OPT.\n", __FUNCTION__, __LINE__);
+        return FAILURE;
     }
 
     DBG_PRINT("%s %d: Constructing other option args to dibbler.\n", __FUNCTION__, __LINE__);
     if (dibbler_get_other_args(params) != SUCCESS)
     {
         DBG_PRINT("%s %d: Unable to get DHCPv6 SEND OPT.\n", __FUNCTION__, __LINE__);
+        return FAILURE;
     }
 
     DBG_PRINT("%s %d: Starting dibbler.\n", __FUNCTION__, __LINE__);
-    pid = start_process(DIBBLER_CLIENT_PATH);
-    DBG_PRINT("%s %d: pid of dibbler is %d.\n", __FUNCTION__, __LINE__, pid);
+    if (start_exe(DIBBLER_CLIENT_CMD) != SUCCESS)
+    {
+        DBG_PRINT("%s %d: Unable to start dibbler-client.\n", __FUNCTION__, __LINE__);
+        return FAILURE;
+    }
 
-    return pid;
-
+    return return_dibbler_pid();
 }
-#endif  // DHCPV6_CLIENT_DIBBLER
+#endif  // DHCPV6_CLIENT_DIBBLER	

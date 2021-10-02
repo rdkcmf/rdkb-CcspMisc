@@ -17,7 +17,6 @@
  * limitations under the License.
  */
 
-#include "dhcp_client_utils.h"
 #include "dibbler_client_utils.h"
 #include <sysevent/sysevent.h>
 #include <syscfg/syscfg.h>

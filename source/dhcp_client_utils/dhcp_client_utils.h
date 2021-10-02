@@ -69,4 +69,4 @@ typedef struct dhcp_opt {
 
 pid_t start_dhcpv4_client (dhcp_params * params);
 pid_t start_dhcpv6_client (dhcp_params * params);
-pid_t start_exe(char * exe, char * args);
+int start_exe(char * cmd);

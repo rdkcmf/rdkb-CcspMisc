@@ -17,10 +17,18 @@
  * limitations under the License.
  */
 
-#define DIBBLER_CLIENT_PATH         "/usr/sbin/dibbler-client"
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sysevent/sysevent.h>
+#include "dhcp_client_utils.h"
 
-#define DIBBLER_CONFIG_FILE "/etc/dibbler/client.conf"
-#define DIBBLER_TMP_CONFIG_FILE "/tmp/dibbler/client-tmp.conf"
+#define DIBBLER_CLIENT_PATH          "/usr/sbin/dibbler-client"
+#define DIBBLER_CLIENT_CMD           "/usr/sbin/dibbler-client start"
+#define DIBBLER_CONFIG_FILE          "/etc/dibbler/client.conf"
+#define DIBBLER_TMP_CONFIG_FILE      "/tmp/dibbler/client-tmp.conf"
 #define DIBBLER_TEMPLATE_CONFIG_FILE "/tmp/dibbler/client-template.conf"
+#define DIBBLER_CLIENT_PIDFILE       "/tmp/dibbler/client.pid"
 
 pid_t start_dibbler (dhcp_params * params, dhcp_opt_list * req_opt_list, dhcp_opt_list * send_opt_list);
