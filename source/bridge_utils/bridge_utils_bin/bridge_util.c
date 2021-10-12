@@ -18,7 +18,7 @@
 */
 
 #include "bridge_util.h"
-
+#include "bridge_util_generic.h"
 #include "bridge_creation.h"
 #include <unistd.h>
 #include "cap.h"
@@ -407,8 +407,11 @@ void enableMoCaIsolationSettings (bridgeDetails *bridgeInfo)
 	{
 		bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
 		mocaIsolationL3NetIdx = atoi(paramValue);
-		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
-		paramValue = NULL;
+		if(bus_handle != NULL)
+		{
+			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
+			paramValue = NULL;
+		}
 
 	}
     	else
@@ -424,8 +427,11 @@ void enableMoCaIsolationSettings (bridgeDetails *bridgeInfo)
 	{
 		bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
 		strncpy(ipaddr,paramValue,sizeof(ipaddr)-1);
-		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
-		paramValue = NULL;
+		if(bus_handle != NULL)
+		{
+			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
+			paramValue = NULL;
+		}
 
 	}
 	else
@@ -443,8 +449,11 @@ void enableMoCaIsolationSettings (bridgeDetails *bridgeInfo)
 	{
 		bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
 		strncpy(primaryBridgeName,paramValue,sizeof(primaryBridgeName)-1);
-		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
-		paramValue = NULL;
+		if(bus_handle != NULL)
+		{
+			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
+			paramValue = NULL;
+		}
 
 	}
     	else
@@ -586,8 +595,11 @@ int getIfList(bridgeDetails *bridgeInfo)
 	        bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
 	        
 	        strncpy(bridgeInfo->bridgeName,paramValue,sizeof(bridgeInfo->bridgeName)-1);
-	        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
-	        paramValue = NULL;
+			if(bus_handle != NULL)
+			{
+	        	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
+	        	paramValue = NULL;
+			}
 
     }
     else
@@ -602,11 +614,13 @@ int getIfList(bridgeDetails *bridgeInfo)
     retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, paramName, NULL, &paramValue);
     if (retPsmGet == CCSP_SUCCESS) 
     {
-	        bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
-			
-		bridgeInfo->vlanID = atoi(paramValue);	        
+	    bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
+		bridgeInfo->vlanID = atoi(paramValue);
+		if(bus_handle != NULL)
+		{	        
 	        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
 	        paramValue = NULL;
+		}
 
     }
     else
@@ -624,8 +638,11 @@ int getIfList(bridgeDetails *bridgeInfo)
 	        bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
 	        
 	        strncpy(bridgeInfo->vlan_name,paramValue,sizeof(bridgeInfo->vlan_name)-1);
-	        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
-	        paramValue = NULL;
+			if(bus_handle != NULL)
+			{
+	        	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
+	        	paramValue = NULL;
+			}
 
     }
     else
@@ -642,8 +659,11 @@ int getIfList(bridgeDetails *bridgeInfo)
 	        bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
 	        
 	        strncpy(bridgeInfo->ethIfList,paramValue,sizeof(bridgeInfo->ethIfList)-1);
-	        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
-	        paramValue = NULL;
+			if(bus_handle != NULL)
+			{
+	        	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
+	        	paramValue = NULL;
+			}
     }
     else
     {
@@ -663,8 +683,11 @@ int getIfList(bridgeDetails *bridgeInfo)
 			        bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
 			        
 			        strncpy(bridgeInfo->MoCAIfList,paramValue,sizeof(bridgeInfo->MoCAIfList)-1);
-			        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
-			        paramValue = NULL;
+					if(bus_handle != NULL)
+					{
+			        	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
+			        	paramValue = NULL;
+					}
 
 		    }
 		    else
@@ -685,8 +708,11 @@ int getIfList(bridgeDetails *bridgeInfo)
 			        bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
 			        
 			        strncpy(bridgeInfo->WiFiIfList,paramValue,sizeof(bridgeInfo->WiFiIfList)-1);
-			        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
-			        paramValue = NULL;
+					if(bus_handle != NULL)
+					{
+			        	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
+			        	paramValue = NULL;
+					}
 
 		     }
 		     else
@@ -706,8 +732,11 @@ int getIfList(bridgeDetails *bridgeInfo)
 	        bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
 	        
 	        strncpy(bridgeInfo->GreIfList,paramValue,sizeof(bridgeInfo->GreIfList)-1);
-	        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
-	        paramValue = NULL;
+			if(bus_handle != NULL)
+			{
+	        	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
+	        	paramValue = NULL;
+			}
 
      }
     else
@@ -746,11 +775,14 @@ int getXfinityEnableStatus()
 	    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, paramName, NULL, &paramValue);
 	    if (retPsmGet == CCSP_SUCCESS) 
 	    {
-		        bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
-				
-			xfinityEnable= atoi(paramValue);	        
-		        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
-		        paramValue = NULL;
+            bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
+
+            xfinityEnable= atoi(paramValue);
+            if(bus_handle != NULL)
+            {
+            (   (CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
+            }
+            paramValue = NULL;
 
 	    }
 	    else
@@ -976,8 +1008,11 @@ void assignIpToBridge(char* bridgeName, char* l3netName)
     {
         bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
         L3NetIdx = atoi(paramValue);
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
-        paramValue = NULL;
+		if(bus_handle != NULL)
+		{
+        	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
+        	paramValue = NULL;
+		}
     }
     else
     {
@@ -992,8 +1027,11 @@ void assignIpToBridge(char* bridgeName, char* l3netName)
     {
         bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
         strncpy(ipaddr,paramValue,sizeof(ipaddr)-1);
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
-        paramValue = NULL;
+		if(bus_handle != NULL)
+		{
+        	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
+        	paramValue = NULL;
+		}
     }
     else
     {
@@ -1008,8 +1046,11 @@ void assignIpToBridge(char* bridgeName, char* l3netName)
     {
         bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
         strncpy(subNetMask,paramValue,sizeof(subNetMask)-1);
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
-        paramValue = NULL;
+		if(bus_handle != NULL)
+		{
+        	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
+        	paramValue = NULL;
+		}
     }
     else
     {
@@ -1401,7 +1442,7 @@ int CreateBrInterface()
 	getIfList(bridgeInfo);
 
 	HandlePreConfigGeneric(bridgeInfo,InstanceNumber);
-	HandlePreConfigVendor(bridgeInfo,InstanceNumber);
+	HandlePreConfigVendorGeneric(bridgeInfo,InstanceNumber);
 
 	if ( bridgeInfo->bridgeName[0] != '\0' )
 	{
@@ -1462,7 +1503,7 @@ int CreateBrInterface()
 
         }
 	HandlePostConfigGeneric(bridgeInfo,InstanceNumber);
-	HandlePostConfigVendor(bridgeInfo,InstanceNumber);
+	HandlePostConfigVendorGeneric(bridgeInfo,InstanceNumber);
 
 	if ( bridgeInfo != NULL )
 	{
@@ -1516,7 +1557,7 @@ int DeleteBrInterface()
 	getIfList(bridgeInfo);
 
 	HandlePreConfigGeneric(bridgeInfo,InstanceNumber);
-	HandlePreConfigVendor(bridgeInfo,InstanceNumber);
+	HandlePreConfigVendorGeneric(bridgeInfo,InstanceNumber);
                 
        	if ( bridgeInfo->vlan_name[0] != '\0' )
         {
@@ -1543,7 +1584,7 @@ int DeleteBrInterface()
 	}
 
 	HandlePostConfigGeneric(bridgeInfo,InstanceNumber);
-	HandlePostConfigVendor(bridgeInfo,InstanceNumber);
+	HandlePostConfigVendorGeneric(bridgeInfo,InstanceNumber);
 
 
 	if ( bridgeInfo != NULL )
@@ -2087,7 +2128,7 @@ int SyncBrInterfaces()
 
 	HandlePreConfigGeneric(bridgeInfo,InstanceNumber);
 
-	HandlePreConfigVendor(bridgeInfo,InstanceNumber);
+	HandlePreConfigVendorGeneric(bridgeInfo,InstanceNumber);
 
 	getCurrentIfList(bridgeInfo->bridgeName,current_if_list);
 
@@ -2097,7 +2138,7 @@ int SyncBrInterfaces()
 		
 	HandlePostConfigGeneric(bridgeInfo,InstanceNumber);
 
-	HandlePostConfigVendor(bridgeInfo,InstanceNumber);
+	HandlePostConfigVendorGeneric(bridgeInfo,InstanceNumber);
 
     snprintf(event_name,sizeof(event_name),"multinet_%d-localready",InstanceNumber);
     sysevent_set(syseventfd_vlan, sysevent_token_vlan, event_name, "1", 0);
@@ -2419,8 +2460,11 @@ void getSettings()
             bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
 
             strncpy(ethWanIfaceName,paramValue,sizeof(ethWanIfaceName)-1);
-            ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
-            paramValue = NULL;
+			if(bus_handle != NULL)
+			{
+            	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
+            	paramValue = NULL;
+			}
         }
         else
         {
@@ -2435,8 +2479,12 @@ void getSettings()
 	{
 		bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
 		MocaIsolation_Enabled = atoi(paramValue);
-		((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
-		paramValue = NULL;
+
+		if(bus_handle != NULL)
+		{
+			((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
+			paramValue = NULL;
+		}
 
 	}
     	else
@@ -2473,7 +2521,7 @@ int HandleWifiInterface(char *Cmd_Opr)
 	return -1;
 }
 
-int main(int argc, char *argv[])
+int bridgeUtils_main(int argc, char *argv[])
 {
 		
 	logFp = fopen(BRIDGE_UTIL_LOG_FNAME,"a+") ;

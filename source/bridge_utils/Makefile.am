@@ -18,3 +18,7 @@
 ##########################################################################
 
 SUBDIRS = bridge_utils_bin
+
+if WITH_GTEST_SUPPORT
+SUBDIRS += test
+endif

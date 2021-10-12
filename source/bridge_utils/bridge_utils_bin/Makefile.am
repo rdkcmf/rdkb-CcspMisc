@@ -29,6 +29,6 @@ bridgeUtils_CPPFLAGS = -I$(top_srcdir)/include \
 						-I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/ovsagent \
 						$(DBUS_CFLAGS)
 
-bridgeUtils_SOURCES = bridge_util.c bridge_creation.c
+bridgeUtils_SOURCES = bridge_util.c bridge_creation.c main.c bridge_util_generic.c
 
 bridgeUtils_LDFLAGS =  -lrt -lccsp_common -lsyscfg -lsysevent -lprivilege -lbridge_utils -lsecure_wrapper
