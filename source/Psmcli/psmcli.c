@@ -515,12 +515,11 @@ static void ccsp_exception_handler(int sig, siginfo_t *info, void *context)
     fprintf( stderr, "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" );
     fprintf( stderr, "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!! Exception Caught !!!!!!!!!!!!!!!!!!!!!!!!!!!!" );
     fprintf( stderr, "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" );
-
     fprintf( stderr, "\n\nSignal info:\n"
                         "\tTime: %s "
                         "\tProcess name: <%s>\n"
                         "\tPID: %d\n"
-                        "\tFault Address: 0x%08x\n"
+                        "\tFault Address: %p\n"
                         "\tSignal: %d \n"
                         "\tSignal Code: %d\n"
                         "\tLast errno: %d:%s \n"
@@ -528,7 +527,7 @@ static void ccsp_exception_handler(int sig, siginfo_t *info, void *context)
                         asctime (timeinfo),
                         cmdName, 
                         pid,
-                        (unsigned int)info->si_addr,
+                        info->si_addr,
                         sig,
                         info->si_code,
                         errno, strerror(errno),
