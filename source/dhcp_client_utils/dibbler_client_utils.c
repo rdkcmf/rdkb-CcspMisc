@@ -134,8 +134,59 @@ static pid_t start_process(char * exe)
 
     return pid;
 }
+static void convert_option16_to_hex(char **optionVal)
+{
+    if(*optionVal == NULL)
+    {
+        return;
+    }
+    
+    char enterprise_number_string[5] = {'\0'};
+    char paddingBuf[] = "  ";
+    int enterprise_number;
+    int enterprise_number_len = 4;
 
-static int dibbler_get_req_options (dhcp_opt_list * req_opt_list)
+    // we receive option value in  [enterprise_number(4 bytes) + vendor-class-data field] format. Parse enterprise_number and covnert to int.
+    strncpy(enterprise_number_string, *optionVal, enterprise_number_len);
+    enterprise_number = atoi(enterprise_number_string);
+
+    //lenth to store option in hex (0x...) format
+    int optlen = 2 + 2 * (strlen(paddingBuf) + strlen(*optionVal) + 1) + 1;
+    char * option16 = malloc (optlen);
+
+    memset (option16, 0 , optlen);
+
+    //convert and store the values in hex format
+    snprintf(option16, 11, "0x%08X", enterprise_number);
+
+    for(int i=0; i<2; i++)
+    {
+        char temp[3] ={'\0'};
+        snprintf(temp, 3, "%02X", paddingBuf[i]);
+        strncat(option16,temp,3);
+    }
+
+    int data_field_length = (int)strlen(*optionVal+enterprise_number_len);
+    for(int i=0; i<=data_field_length; i++)
+    {
+        char temp[3] ={'\0'};
+        snprintf(temp, 3, "%02X", (*optionVal)[enterprise_number_len+i]);
+        strncat(option16,temp,3);
+    }
+    free(*optionVal);
+    *optionVal = option16;
+
+    return;
+}
+
+/*
+ * dibbler_get_options ()
+ * @description: This function will construct conf file with all the dibbler GET options
+ * @params     : req_opt_list - input list of DHCPv6 GET options, send_opt_list - input list of DHCPv6 send options
+ * @return     : SUCCESS if config file written successfully, else returns FAILURE
+ *
+ */
+static int dibbler_get_options (dhcp_opt_list * req_opt_list, dhcp_opt_list * send_opt_list)
 {
     FILE * fin;
     FILE * fout;
@@ -144,6 +195,7 @@ static int dibbler_get_req_options (dhcp_opt_list * req_opt_list)
     ssize_t read;
     char mapt_config[BUFLEN_16] = {0};
     bool optionTempFound = 0;
+    bool option20Found = 0;
 
     if (req_opt_list == NULL)
     {
@@ -193,6 +245,31 @@ static int dibbler_get_req_options (dhcp_opt_list * req_opt_list)
                         }
                         opt_list = opt_list->next;
                     }
+
+                    //send option list
+                    opt_list = send_opt_list;
+                    while (opt_list)
+                    {
+                        memset (&args, 0, BUFLEN_128);
+
+                        if (opt_list->dhcp_opt == DHCPV6_OPT_16)
+                        {
+                            convert_option16_to_hex(&opt_list->dhcp_opt_val);
+                            snprintf (args, BUFLEN_128, "\n\toption 00%d hex %s\n", opt_list->dhcp_opt, opt_list->dhcp_opt_val);
+                            fputs(args, fout);
+                        }
+                        else if (opt_list->dhcp_opt == DHCPV6_OPT_15)
+                        {
+                            snprintf (args, BUFLEN_128, "\n\toption 00%d string \"%s\"\n", opt_list->dhcp_opt, opt_list->dhcp_opt_val);
+                            fputs(args, fout);
+                        }
+                        else if (opt_list->dhcp_opt == DHCPV6_OPT_20)
+                        {
+                            option20Found = 1;
+                        }
+                        opt_list = opt_list->next;
+                    }
+                        
                 }
             }
             else
@@ -200,9 +277,13 @@ static int dibbler_get_req_options (dhcp_opt_list * req_opt_list)
                 fputs(line, fout);
             }
         }
-
-	unlink(DIBBLER_CONFIG_FILE);
-	symlink(DIBBLER_TEMPLATE_CONFIG_FILE, DIBBLER_CONFIG_FILE);
+        if(option20Found)
+        {
+            snprintf (args, BUFLEN_128, "\n%s\n", "reconfigure-accept 1");
+            fputs(args, fout);
+        }
+        unlink(DIBBLER_CONFIG_FILE);
+        symlink(DIBBLER_TEMPLATE_CONFIG_FILE, DIBBLER_CONFIG_FILE);
         //memset (&args, 0, BUFLEN_128);
         //snprintf (args, BUFLEN_128, "ln -fs %s %s ", DIBBLER_TEMPLATE_CONFIG_FILE, DIBBLER_CONFIG_FILE);
         //system(args);
@@ -218,30 +299,6 @@ static int dibbler_get_req_options (dhcp_opt_list * req_opt_list)
     DBG_PRINT("%s %d: sucessfully Updated %s file with Request Options \n", __FUNCTION__, __LINE__, DIBBLER_TEMPLATE_CONFIG_FILE);
     return SUCCESS;
 
-}
-
-/*
- * dibbler_get_send_options ()
- * @description: This function will construct a buffer with all the dibbler SEND options
- * @params     : req_opt_list - input list of DHCP SEND options
- * @return     : return a buffer that has <SEND-DHCP-OPT SEND-DHCP-OPT-VALUE VALUE-TYPE> (or <SEND-DHCP-OPT> <SEND-DHCP-OPT-VALUE> for option23)
- *
- */
-static int dibbler_get_send_options (dhcp_opt_list * send_opt_list)
-{
-    if (send_opt_list == NULL)
-    {
-        DBG_PRINT("%s %d: No send option sent to dibbler.\n", __FUNCTION__, __LINE__);
-        return FAILURE;
-    }
-
-    while ((send_opt_list != NULL) && (send_opt_list->dhcp_opt_val != NULL))
-    {
-        DBG_PRINT("%s %d: dhcpv6 send options %d \n", __FUNCTION__, __LINE__, send_opt_list->dhcp_opt);
-        send_opt_list = send_opt_list->next;
-    }
-
-    return SUCCESS;
 }
 
 /*
@@ -276,16 +333,10 @@ pid_t start_dibbler (dhcp_params * params, dhcp_opt_list * req_opt_list, dhcp_op
         return FAILURE;
     }
 
-    DBG_PRINT("%s %d: Constructing REQUEST option args to dibbler.\n", __FUNCTION__, __LINE__);
-    if (dibbler_get_req_options(req_opt_list) != SUCCESS)
+    DBG_PRINT("%s %d: Constructing REQUEST and SEND option args to dibbler.\n", __FUNCTION__, __LINE__);
+    if (dibbler_get_options(req_opt_list,send_opt_list) != SUCCESS)
     {
         DBG_PRINT("%s %d: Unable to get DHCPv6 REQ OPT.\n", __FUNCTION__, __LINE__);
-    }
-
-    DBG_PRINT("%s %d: Constructing SEND option args to dibbler.\n", __FUNCTION__, __LINE__);
-    if (dibbler_get_send_options(send_opt_list) != SUCCESS)
-    {
-        DBG_PRINT("%s %d: Unable to get DHCPv6 SEND OPT.\n", __FUNCTION__, __LINE__);
     }
 
     DBG_PRINT("%s %d: Constructing other option args to dibbler.\n", __FUNCTION__, __LINE__);
