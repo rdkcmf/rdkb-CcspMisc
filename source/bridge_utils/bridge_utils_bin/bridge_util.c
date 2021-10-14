@@ -2231,24 +2231,23 @@ void getSettings()
         memset(buf,0,sizeof(buf));
 
         memset(ethWanIfaceName,0,sizeof(ethWanIfaceName));
-        if( 0 == syscfg_get( NULL, "eth_wan_iface_name", ethWanIfaceName, sizeof( ethWanIfaceName ) ) )
-        {
-            bridge_util_log("ethWanIfaceName is %s\n",ethWanIfaceName);
-        }
-        else
-        {
-            bridge_util_log("syscfg_get failed to retrieve ethWanIfaceName\n");
-        }
-
         if( 0 == syscfg_get( NULL, "eth_wan_enabled", buf, sizeof( buf ) ) )
         {
                 if ( strcmp (buf,"true") == 0 )
                 {
-                    	ethWanEnabled = 1;
+                    ethWanEnabled = 1;
+                    if( 0 == syscfg_get( NULL, "eth_wan_iface_name", ethWanIfaceName, sizeof( ethWanIfaceName ) ) )
+                    {
+                        bridge_util_log("ethWanIfaceName is %s\n",ethWanIfaceName);
+                    }
+                    else
+                    {
+                        bridge_util_log("syscfg_get failed to retrieve ethWanIfaceName\n");
+                    }
                 }
                 else
                 {
-                    	ethWanEnabled = 0;   
+                    ethWanEnabled = 0;   
                 }
         }
         else
