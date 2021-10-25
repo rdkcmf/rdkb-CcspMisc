@@ -20,7 +20,7 @@
 #include<sys/inotify.h>
 #include<limits.h>
 #include<pthread.h>
-
+#include "secure_wrapper.h"
 #define DHCP_LEASE_FILE "/nvram/dnsmasq.leases"
 
 #define EVENT_SIZE  ( sizeof (struct inotify_event) )
@@ -58,7 +58,7 @@ void* MonitorDHCPLeaseFile(void *arg)
 	     ret = IsFileExists(DHCP_LEASE_FILE);
      }
 
-     system("sh /etc/utopia/service.d/service_lan/dhcp_lease_sync.sh");      
+     v_secure_system("/etc/utopia/service.d/service_lan/dhcp_lease_sync.sh");      
      inotifywd = inotify_add_watch(inotifyFd, DHCP_LEASE_FILE, IN_MODIFY);
       if (inotifywd == -1)
      {
@@ -82,7 +82,7 @@ void* MonitorDHCPLeaseFile(void *arg)
 		 event = (struct inotify_event *) p;
 		 if (event->mask & IN_MODIFY)
 		 {
-			system("sh /etc/utopia/service.d/service_lan/dhcp_lease_sync.sh");
+			v_secure_system("/etc/utopia/service.d/service_lan/dhcp_lease_sync.sh");
 		 } 
 		 p += sizeof(struct inotify_event) + event->len;
 	     }

@@ -20,3 +20,5 @@
 bin_PROGRAMS = parcon
 
 parcon_SOURCES = parcon.c
+
+parcon_LDFLAGS = -lsecure_wrapper

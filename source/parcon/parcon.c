@@ -21,7 +21,7 @@
 #include <sys/file.h>
 #include <stdlib.h>
 #include "safec_lib_common.h"
-
+#include "secure_wrapper.h"
 #define PCMD_LIST "/tmp/.pcmd"
 #define LOG_FILE "/rdklogs/logs/Parcon.txt"
 #define TRUE 1
@@ -42,16 +42,15 @@ int validate_mac(char * physAddress)
 
 int main( int argc, char *argv[] )  {
 int count = 1;
-errno_t rc		= -1;
+
 
    printf("argc = %d\n",argc);
    FILE * fp;
-   char errbuf[100] = {0};
-   system("echo ----------------- >> "LOG_FILE);
-   system("echo parcon_entry >> "LOG_FILE"; date >> "LOG_FILE);
+   v_secure_system("echo ----------------- >> "LOG_FILE);
+   v_secure_system("echo parcon_entry >> "LOG_FILE"; date >> "LOG_FILE);
    if(argc == 1)
    {
-	   system("echo Cleaning the block list >> "LOG_FILE);
+	   v_secure_system("echo Cleaning the block list >> "LOG_FILE);
    }
    fp = fopen (PCMD_LIST, "w+");
    if(fp != NULL)
@@ -67,25 +66,22 @@ errno_t rc		= -1;
 		}
 		else
 		{
-		    rc = memset_s(errbuf,sizeof(errbuf), 0, sizeof(errbuf));
-		    ERR_CHK(rc);
-		    sprintf(errbuf,"echo Error: Invalid input Mac address %s >> " LOG_FILE,argv[count] );
-		    system(errbuf);
+		    v_secure_system("echo Error: Invalid input Mac address %s >> " LOG_FILE,argv[count] );
 		}
 	      	count++;	
 	   }
-           system("echo Got the device list, Restarting firewall >> "LOG_FILE);
-           system("sysevent set firewall-restart");
+           v_secure_system("echo Got the device list, Restarting firewall >> "LOG_FILE);
+           v_secure_system("sysevent set firewall-restart");
            fflush(fp);
            flock(fileno(fp), LOCK_UN);
            fclose(fp);
    }
    else
    {
-      system("echo Error: Not able to create" PCMD_LIST " >> "LOG_FILE);
+       v_secure_system("echo Error: Not able to create" PCMD_LIST " >> "LOG_FILE);
    }
 
-   system("echo parcon_exit >> "LOG_FILE"; date >> "LOG_FILE);
-   system("echo ----------------- >> "LOG_FILE);
+   v_secure_system("echo parcon_exit >> "LOG_FILE"; date >> "LOG_FILE);
+   v_secure_system("echo ----------------- >> "LOG_FILE);
    return 0;
 }

@@ -20,3 +20,5 @@
 bin_PROGRAMS = notify_lease
 
 notify_lease_SOURCES = Notify_Lease.c
+
+notify_lease_LDFLAGS = -lsecure_wrapper

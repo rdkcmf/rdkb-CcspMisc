@@ -22,7 +22,8 @@
 #include "bridge_creation.h"
 #include <unistd.h>
 #include "cap.h"
-
+#include "secure_wrapper.h"
+#include <sys/stat.h>
 #ifdef INCLUDE_BREAKPAD
 #include "breakpad_wrapper.h"
 #endif
@@ -372,8 +373,7 @@ void enableMoCaIsolationSettings (bridgeDetails *bridgeInfo)
 	char paramName[256]={0};
 	int retPsmGet = CCSP_SUCCESS;
 	char *paramValue = NULL;
-
-	char cmd[4096] = {0} ;
+        int ret =0;
 	char ipaddr[64] = {0} ;
 	int  mocaIsolationL3NetIdx = 0;
 
@@ -429,14 +429,14 @@ void enableMoCaIsolationSettings (bridgeDetails *bridgeInfo)
 
     	}
 
-	snprintf(cmd,sizeof(cmd),"ip link set %s allmulticast on ;\
+	ret = v_secure_system("ip link set %s allmulticast on ;\
 	    	ifconfig %s %s ; \
 	    	ip link set %s up ; \
 	    	echo 0 > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts ; \
 	    	sysctl -w net.ipv4.conf.all.arp_announce=3 ; \
 	    	ip rule add from all iif %s lookup all_lans ; \
-	    	echo 0 > /proc/sys/net/ipv4/conf/%s/rp_filter ;\
-	    	touch %s ;",
+	    	echo 0 > /proc/sys/net/ipv4/conf/'%s'/rp_filter ;\
+	    	touch %s ",
 	    	bridgeInfo->bridgeName,
 	    	bridgeInfo->bridgeName,
 	    	ipaddr,
@@ -445,8 +445,11 @@ void enableMoCaIsolationSettings (bridgeDetails *bridgeInfo)
 	    	bridgeInfo->bridgeName,
 	    	LOCAL_MOCABR_UP_FILE);
 
-	system(cmd);
-
+        if(ret !=0)
+        {
+                bridge_util_log("Failed in exceuting the command via v_secure_system() ret %d\n",ret);
+        }
+  
 	return;
 }
 
@@ -473,9 +476,13 @@ void enableMoCaIsolationSettings (bridgeDetails *bridgeInfo)
 
 void disableMoCaIsolationSettings (bridgeDetails *bridgeInfo)
 {
-	char cmd[256] = {0};
-	snprintf(cmd,sizeof(cmd),"ip link set %s down",bridgeInfo->bridgeName);
-	system(cmd);
+	int ret =0;
+        ret = v_secure_system("ip link set %s down",bridgeInfo->bridgeName);
+        if(ret != 0)
+        {
+            bridge_util_log("Failed in executing the command via v_secure_system ret val: %d \n",ret);
+        }
+
 }
 
 
@@ -817,10 +824,10 @@ int wait_for_gre_ready(char* GreIf)
 
 int HandlePreConfigGeneric(bridgeDetails *bridgeInfo,int InstanceNumber)
 {
-		char cmd[1024] = {0} ;
+		
 		char IfList_Copy[IFLIST_SIZE] = {0} ;
     	char* token = NULL; 
-
+        int ret = 0;
     	char* rest = NULL; 
 		/* This is platform specific code to handle platform specific operation for given config pre bridge creation*/
 	switch(InstanceNumber)
@@ -843,8 +850,12 @@ int HandlePreConfigGeneric(bridgeDetails *bridgeInfo,int InstanceNumber)
 							rest = IfList_Copy ;
 							while ((token = strtok_r(rest, " ", &rest))) 
 							{
-								snprintf(cmd,sizeof(cmd),"sh %s create %d %s",GRE_HANDLER_SCRIPT,InstanceNumber,token);
-								system(cmd);
+						                ret = v_secure_system(GRE_HANDLER_SCRIPT " create %d %s",InstanceNumber,token);
+                                                                if(ret != 0)
+                                                                {
+                                                                     bridge_util_log("Failed in executing the command via v_secure_system ret val: %d \n", ret);
+                                                                }
+
 												
 							}    				
 						}
@@ -933,7 +944,7 @@ void assignIpToBridge(char* bridgeName, char* l3netName)
     char paramName[256]={0};
     int retPsmGet = CCSP_SUCCESS;
     char *paramValue = NULL;
-
+    int ret =0 ;
     char ipaddr[64] = {0} ;
     char subNetMask[64] = {0};
     int L3NetIdx = 0;
@@ -983,18 +994,26 @@ void assignIpToBridge(char* bridgeName, char* l3netName)
         bridge_util_log("%s: psm call failed for %s, ret code %d\n", __func__, paramName, retPsmGet);
     }
 
-    char cmd[256] = {0} ;
     if(subNetMask[0] != '\0')
     {
         bridge_util_log("%s : Assigning Ip %s with default subnetmask %s to bridge %s \n",__FUNCTION__,ipaddr,subNetMask, bridgeName);
-        snprintf(cmd,sizeof(cmd),"ifconfig %s %s netmask %s up",bridgeName,ipaddr, subNetMask);
+        ret = v_secure_system("ifconfig %s %s netmask %s up",bridgeName,ipaddr, subNetMask);
+        if(ret != 0)
+        {
+            bridge_util_log("Failure in executing command via v_secure_system. ret val: %d \n", ret);
+        }
+
     }
     else
     {
         bridge_util_log("%s : Assigning Ip %s to bridge %s \n",__FUNCTION__,ipaddr,bridgeName);
-        snprintf(cmd,sizeof(cmd),"ifconfig %s %s",bridgeName,ipaddr);
+        ret = v_secure_system("ifconfig %s %s",bridgeName,ipaddr);
+        if(ret != 0)
+        {
+            bridge_util_log("Failure in executing command via v_secure_system. ret val: %d \n", ret);
+        }
+
     }
-    system(cmd);
     return;
 }
 
@@ -2142,12 +2161,7 @@ void drop_root()
 int Initialize()
 {
 	// Initializing bus communication 
-
-    	char cmd[64] = {0};
-    	memset(cmd,0,sizeof(cmd));
-    	snprintf(cmd,sizeof(cmd),"touch %s",BRIDGE_UTIL_RUNNING);
-    	system(cmd);
-
+    	creat(BRIDGE_UTIL_RUNNING,S_IRUSR |S_IWUSR | S_IRGRP | S_IROTH);
 	int ret;
 	ret = CCSP_Message_Bus_Init(component_id, pCfg, &bus_handle,(CCSP_MESSAGE_BUS_MALLOC) Ansc_AllocateMemory_Callback, Ansc_FreeMemory_Callback);
 	if (ret == -1)
