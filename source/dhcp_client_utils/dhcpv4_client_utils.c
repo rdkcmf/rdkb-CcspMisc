@@ -22,32 +22,6 @@
 #include <syscfg/syscfg.h>
 #include <string.h>
 
-/*
- * start_exe ()
- * @description: This function start udhcpc client program and return pid.
- * @params     : exe - program to run eg: "udhcpc"
- * @return     : returns the pid of the program started.
- *
- */
-int start_exe(char * cmd)
-{
-
-    if (cmd == NULL)
-    {
-        DBG_PRINT("%s %d: Invalid args..\n", __FUNCTION__, __LINE__);
-        return FAILURE;
-    }
-
-    // run the client program
-    if (system(cmd) == -1)
-    {
-        DBG_PRINT("%s %d: system() call failed due to %s\n", __FUNCTION__, __LINE__, strerror(errno));
-        return FAILURE;
-    }
-
-    return SUCCESS;
-}
-
 #if DHCPV4_CLIEN_TI_UDHCPC
 static pid_t start_ti_udhcpc (dhcp_params * params)
 {
@@ -60,35 +34,14 @@ static pid_t start_ti_udhcpc (dhcp_params * params)
 #endif  // DHCPV4_CLIENT_TI_UDHCPC
 
 /*
- * free_opt_list_data ()
- * @description: This function is called to free all the dynamic list created to hold dhcp options.
- * @params     : opt_list - list to free
- * @return     : no return
+ * add_dhcpv4_opt_to_list ()
+ * @description: util function to add DHCP opt and DHCP opt value to list
+ * @params     : opt_list - output param to add DHCP options
+               : opt - DHCP option
+               : opt_val - DHCP option value - optional
+ * @return     : returns the SUCCESS on adding option to list, else returns failure
  *
  */
-void free_opt_list_data (dhcp_opt_list * opt_list)
-{
-    if (opt_list == NULL)
-    {
-        return;
-    }
-
-    dhcp_opt_list * tmp_node = NULL;
-
-    while (opt_list)
-    {
-        tmp_node = opt_list;
-        opt_list = opt_list->next;
-        if (tmp_node->dhcp_opt_val)
-        {
-            // DHCPv4 send opt will have opt_val
-            free(tmp_node->dhcp_opt_val);
-        }
-        free(tmp_node);
-    }
-
-}
-
 static int add_dhcpv4_opt_to_list (dhcp_opt_list ** opt_list, int opt, char * opt_val)
 {
 
@@ -116,7 +69,14 @@ static int add_dhcpv4_opt_to_list (dhcp_opt_list ** opt_list, int opt, char * op
 
 }
 
-
+/*
+ * get_dhcpv4_opt_list ()
+ * @description: Returns a list of DHCP REQ and a list of DHCP SEND options
+ * @params     : req_opt_list - output param to fill the DHCP REQ options
+               : send_opt_list - output param to fill the DHCP SEND options
+ * @return     : returns the SUCCESS on successful fetching of DHCP options, else returns failure
+ *
+ */
 static int get_dhcpv4_opt_list (dhcp_opt_list ** req_opt_list, dhcp_opt_list ** send_opt_list)
 {
     char wanoe_enable[BUFLEN_16] = {0};

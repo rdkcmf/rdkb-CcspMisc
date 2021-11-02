@@ -22,37 +22,6 @@
 
 #ifdef DHCPV4_CLIENT_UDHCPC
 
-
-static pid_t return_udhcpc_pid (dhcp_params * params)
-{
-
-    pid_t pid = 0;
-
-    if ((params == NULL) || (params->ifname == NULL))
-    {
-        DBG_PRINT("%s %d: Invalid args..\n", __FUNCTION__, __LINE__);
-        return pid;
-    }
-
-    FILE * pidfile_fd = NULL;
-    char pidfile[BUFLEN_32] = {0};
-
-    snprintf (pidfile, sizeof(pidfile), UDHCP_PIDFILE , params->ifname);
-    pidfile_fd = fopen(pidfile, "r");
-
-    if (pidfile_fd == NULL)
-    {
-        DBG_PRINT("%s %d: Unable to open pidfile: %s due to errorno: %s\n", __FUNCTION__, __LINE__, pidfile, strerror(errno));
-        return pid;
-    }
-
-    fscanf(pidfile_fd, "%d\n", &pid);
-
-    DBG_PRINT("%s %d: pid of udhcpc is %d.\n", __FUNCTION__, __LINE__, pid);
-    return pid;
-
-}
-
 /*
  * ascii_to_hex ()
  * @description: returns allocated space with hex value of the input argument passed.
@@ -254,8 +223,6 @@ pid_t start_udhcpc (dhcp_params * params, dhcp_opt_list * req_opt_list, dhcp_opt
 
     char buff [BUFLEN_512] = {0};
 
-    snprintf(buff, sizeof(buff) - 1, "%s ", UDHCPC_CLIENT_PATH);
-
     DBG_PRINT("%s %d: Constructing REQUEST option args to udhcpc.\n", __FUNCTION__, __LINE__);
     if (udhcpc_get_req_options(buff, req_opt_list) != SUCCESS)
     {
@@ -278,13 +245,8 @@ pid_t start_udhcpc (dhcp_params * params, dhcp_opt_list * req_opt_list, dhcp_opt
     }
 
     DBG_PRINT("%s %d: Starting udhcpc.\n", __FUNCTION__, __LINE__);
-    if (start_exe(buff) != SUCCESS )
-    {
-        DBG_PRINT("%s %d: Unable to get DHCPv4 SEND OPT.\n", __FUNCTION__, __LINE__);
-        return FAILURE;
-    }
 
-    return return_udhcpc_pid(params);
+    return start_exe(UDHCPC_CLIENT_PATH, buff);
 
 }
 #endif  // DHCPV4_CLIENT_UDHCPC

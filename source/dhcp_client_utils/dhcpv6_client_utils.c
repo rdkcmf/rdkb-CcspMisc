@@ -28,36 +28,6 @@
 token_t dhcp_sysevent_token;
 int dhcp_sysevent_fd;
 
-/*
- * free_opt_list_data ()
- * @description: This function is called to free all the dynamic list created to hold dhcpv6 options.
- * @params     : opt_list - list to free
- * @return     : no return
- *
- */
-static void free_opt_list_data (dhcp_opt_list * opt_list)
-{
-    if (opt_list == NULL)
-    {
-        return;
-    }
-
-    dhcp_opt_list * tmp_node = NULL;
-
-    while (opt_list)
-    {
-        tmp_node = opt_list;
-        opt_list = opt_list->next;
-        if (tmp_node->dhcp_opt_val)
-        {
-            // DHCPv4 send opt will have opt_val
-            free(tmp_node->dhcp_opt_val);
-        }
-        free(tmp_node);
-    }
-
-}
-
 static int get_dhcpv6_opt_list (dhcp_opt_list ** req_opt_list, dhcp_opt_list ** send_opt_list)
 {
     char dslite_enable[BUFLEN_16] = {0};

@@ -27,6 +27,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <dirent.h>
+#include <sys/wait.h>
 #include "syscfg/syscfg.h"
 #include "platform_hal.h"
 
@@ -51,6 +53,11 @@
 #define BUFLEN_512             512         //!< buffer length 512
 #define BUFLEN_1024            1024        //!< buffer length 1024
 #define CONSOLE_LOG_FILE       "/rdklogs/logs/WANMANAGERLog.txt.0"
+#define COLLECT_WAIT_INTERVAL_MS          4
+#define USECS_IN_MSEC                     1000
+#define MSECS_IN_SEC                      1000
+#define RETURN_PID_TIMEOUT_IN_MSEC        (5 * MSECS_IN_SEC)    // 5 sec
+#define RETURN_PID_INTERVAL_IN_MSEC       (0.5 * MSECS_IN_SEC)  // 0.5 sec - half a second
 
 #define DBG_PRINT(fmt ...)     {\
     FILE     *fp        = NULL;\
@@ -69,4 +76,7 @@ typedef struct dhcp_opt {
 
 pid_t start_dhcpv4_client (dhcp_params * params);
 pid_t start_dhcpv6_client (dhcp_params * params);
-int start_exe(char * cmd);
+pid_t start_exe(char * exe, char * args);
+pid_t get_process_pid (char * name);
+int collect_waiting_process(int pid, int timeout);
+void free_opt_list_data (dhcp_opt_list * opt_list);

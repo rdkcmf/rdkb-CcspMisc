@@ -24,11 +24,14 @@
 #include <sysevent/sysevent.h>
 #include "dhcp_client_utils.h"
 
-#define DIBBLER_CLIENT_PATH          "/usr/sbin/dibbler-client"
-#define DIBBLER_CLIENT_CMD           "/usr/sbin/dibbler-client start"
+#define DIBBLER_CLIENT                    "dibbler-client"
+#define DIBBLER_CLIENT_PATH               "/usr/sbin/"DIBBLER_CLIENT
+#define DIBBLER_CLIENT_RUN_CMD            "start"
+#define DIBBLER_CLIENT_CMD                DIBBLER_CLIENT" "DIBBLER_CLIENT_RUN_CMD
 #define DIBBLER_CONFIG_FILE          "/etc/dibbler/client.conf"
 #define DIBBLER_TMP_CONFIG_FILE      "/tmp/dibbler/client-tmp.conf"
 #define DIBBLER_TEMPLATE_CONFIG_FILE "/tmp/dibbler/client-template.conf"
 #define DIBBLER_CLIENT_PIDFILE       "/tmp/dibbler/client.pid"
+#define DIBBLER_CLIENT_TERMINATE_TIMEOUT  (5 * MSECS_IN_SEC)
 
 pid_t start_dibbler (dhcp_params * params, dhcp_opt_list * req_opt_list, dhcp_opt_list * send_opt_list);

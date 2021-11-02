@@ -31,6 +31,6 @@ ACLOCAL_AMFLAGS = -I m4
 hardware_platform = i686-linux-gnu
 
 lib_LTLIBRARIES = libdhcp_client_utils.la
-libdhcp_client_utils_la_SOURCES = dhcpv4_client_utils.c udhcpc_client_utils.c dhcpv6_client_utils.c dibbler_client_utils.c
+libdhcp_client_utils_la_SOURCES = dhcpv4_client_utils.c udhcpc_client_utils.c dhcpv6_client_utils.c dibbler_client_utils.c dhcp_client_common.c
 libdhcp_client_utils_la_LDFLAGS = -lhal_platform -lsysevent -lsyscfg
 

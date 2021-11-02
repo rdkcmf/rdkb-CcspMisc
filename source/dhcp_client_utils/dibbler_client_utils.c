@@ -27,31 +27,6 @@
 extern token_t dhcp_sysevent_token;
 extern int dhcp_sysevent_fd;
 
-/*
- * return_dibbler_pid ()
- * @description: This function will return the pid of the dibbler-client process
- * @return     : returns a pid of runnning dibbler-client
- *
- */
-static pid_t return_dibbler_pid ()
-{
-    pid_t pid = 0;
-    FILE * pidfile_fd = NULL;
-
-    pidfile_fd = fopen(DIBBLER_CLIENT_PIDFILE, "r");
-
-    if (pidfile_fd == NULL)
-    {
-        DBG_PRINT("%s %d: Unable to open pidfile: %s due to errorno: %s\n", __FUNCTION__, __LINE__, DIBBLER_CLIENT_PIDFILE, strerror(errno));
-        return pid;
-    }
-
-    fscanf(pidfile_fd, "%d", &pid);
-
-    DBG_PRINT("%s %d: pid of dibbler is %d.\n", __FUNCTION__, __LINE__, pid);
-    return pid;
-
-}
 static void convert_option16_to_hex(char **optionVal)
 {
     if(*optionVal == NULL)
@@ -264,12 +239,21 @@ pid_t start_dibbler (dhcp_params * params, dhcp_opt_list * req_opt_list, dhcp_op
     }
 
     DBG_PRINT("%s %d: Starting dibbler.\n", __FUNCTION__, __LINE__);
-    if (start_exe(DIBBLER_CLIENT_CMD) != SUCCESS)
+    pid_t ret = start_exe(DIBBLER_CLIENT_PATH, DIBBLER_CLIENT_RUN_CMD);
+    if (ret <= 0)
     {
-        DBG_PRINT("%s %d: Unable to start dibbler-client.\n", __FUNCTION__, __LINE__);
+        DBG_PRINT("%s %d: unable to start dibbler-client %d.\n", __FUNCTION__, __LINE__, ret);
         return FAILURE;
     }
 
-    return return_dibbler_pid();
+    //dibbler-client will demonize a child thread during start, so we need to collect the exited main thread
+    if (collect_waiting_process(ret, DIBBLER_CLIENT_TERMINATE_TIMEOUT) != SUCCESS)
+    {
+        DBG_PRINT("%s %d: unable to collect pid for %d.\n", __FUNCTION__, __LINE__, ret);
+    }
+
+    DBG_PRINT("%s %d: Started dibbler-client. returning pid..\n", __FUNCTION__, __LINE__);
+    return get_process_pid (DIBBLER_CLIENT);
+
 }
 #endif  // DHCPV6_CLIENT_DIBBLER	
