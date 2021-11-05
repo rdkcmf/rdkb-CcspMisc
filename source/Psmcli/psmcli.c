@@ -63,6 +63,10 @@
 
 #define TYPE_STRING_SIZE 16
 
+#ifdef INCLUDE_BREAKPAD
+#include "breakpad_wrapper.h"
+#endif
+
 /* DEBUG FLAG */
 #ifdef _DEBUG
 // #define _DEBUG_LOCAL  // to add more debug messages
@@ -134,8 +138,10 @@ typedef struct CmdsTable {
 /* FUNCTION PROTOTYPES */
 // no external interface defined, so all functions should be local
 static void help_usage();
+#ifndef INCLUDE_BREAKPAD
 static void ccsp_exception_handler(int sig, siginfo_t *info, void *context);
 static void enable_ccsp_exception_handlers();
+#endif
 static unsigned int get_type_info(unsigned int *ccspType, char **typeString, int const typeFormat);
 static psmcli_debug_level psmcli_get_debug_level(char const *file_name);
 // static inline void process_show();
@@ -187,7 +193,11 @@ int main(int argc, char**argv)
     errno_t rc                               = -1;
     int     ind                              = -1;
 
+#ifdef INCLUDE_BREAKPAD
+    breakpad_ExceptionHandler();
+#else
     enable_ccsp_exception_handlers();
+#endif
 
     sprintf(prog_name, "PsmCli.pid%d", getpid());
 
@@ -441,7 +451,7 @@ EXIT:
     exit(ret);
     // return ret;
 }
-
+#ifndef INCLUDE_BREAKPAD
 static int is_core_dump_opened(void)
 {
     FILE *fp;
@@ -590,7 +600,7 @@ static void enable_ccsp_exception_handlers( )
 
         return;
 }
-
+#endif
 static psmcli_debug_level psmcli_get_debug_level(char const *file_name) {
 
     psmcli_debug_level ret = PSMCLI_DEBUG_PRINT_NONE;
