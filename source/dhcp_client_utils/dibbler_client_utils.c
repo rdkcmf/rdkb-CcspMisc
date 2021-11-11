@@ -151,7 +151,8 @@ static void convert_option16_to_hex(char **optionVal)
     enterprise_number = atoi(enterprise_number_string);
 
     //lenth to store option in hex (0x...) format
-    int optlen = 2 + 2 * (strlen(paddingBuf) + strlen(*optionVal) + 1) + 1;
+    // 2 (length for "0x") + length to store option value in %02X (2 * (len of paddingBuf + len of *optionVal + len of null)) + 1 (null)
+    int optlen = 2 + 2 * (2 + strlen(*optionVal) + 1) + 1;
     char * option16 = malloc (optlen);
 
     memset (option16, 0 , optlen);
