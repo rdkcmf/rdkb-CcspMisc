@@ -142,7 +142,7 @@ static void convert_option16_to_hex(char **optionVal)
     }
     
     char enterprise_number_string[5] = {'\0'};
-    char paddingBuf[] = "\0\"";
+    char paddingBuf[] = "  ";
     int enterprise_number;
     int enterprise_number_len = 4;
 
