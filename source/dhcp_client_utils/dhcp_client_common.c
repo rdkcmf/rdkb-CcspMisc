@@ -313,7 +313,7 @@ static int parseArgs(const char *cmd, const char *args, char ***argv)
 
     if (array[argIndex] == NULL)
     {
-        DBG_PRINT("memory allocation of %d failed", strlen(cmdStr) + 1);
+        DBG_PRINT("memory allocation of %lu failed", (ULONG)strlen(cmdStr) + 1);
         freeArgs(array);
         return FAILURE;
     }
