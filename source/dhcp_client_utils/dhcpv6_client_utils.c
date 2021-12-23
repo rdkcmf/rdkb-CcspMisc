@@ -100,7 +100,7 @@ pid_t start_dhcpv6_client (dhcp_params * params)
         return 0;
     }
 
-    syscfg_init();
+
     dhcp_sysevent_fd =  sysevent_open(LOCALHOST, SE_SERVER_WELL_KNOWN_PORT, SE_VERSION, sysevent_name, &dhcp_sysevent_token);
     if (dhcp_sysevent_fd < 0)
     {

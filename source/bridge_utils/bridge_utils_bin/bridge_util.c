@@ -2171,13 +2171,6 @@ int Initialize()
 				
 	}
 
-	// Initializing syscfg
-	ret = syscfg_init();
-	if (ret != 0) {
-	        bridge_util_log("%s: syscfg initialization failure (%d)\n", __FUNCTION__,ret);
-		return FAILED;
-	}
-
 	//Initialize sysevent
 
 	syseventfd_vlan = sysevent_open("127.0.0.1", SE_SERVER_WELL_KNOWN_PORT, SE_VERSION,
