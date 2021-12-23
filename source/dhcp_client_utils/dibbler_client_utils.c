@@ -17,11 +17,9 @@
  * limitations under the License.
  */
 
-#include "dibbler_client_utils.h"
-
-#ifdef FEATURE_MAPT
 #include <syscfg/syscfg.h>
-#endif
+
+#include "dibbler_client_utils.h"
 
 #ifdef DHCPV6_CLIENT_DIBBLER
 
@@ -170,8 +168,6 @@ static int dibbler_client_prepare_config (dibbler_client_info * client_info)
     char args [BUFLEN_128] = {0};
 #ifdef FEATURE_MAPT
     char mapt_feature_enable[BUFLEN_16] = {0};
-
-    syscfg_init();
 #endif
 
     fout = fopen(DIBBLER_TEMPLATE_CONFIG_FILE, "wb");
