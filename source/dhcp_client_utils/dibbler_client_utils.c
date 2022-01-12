@@ -35,17 +35,17 @@ static void convert_option16_to_hex(char **optionVal)
     }
     
     char enterprise_number_string[5] = {'\0'};
-    char paddingBuf[] = "\0\"";
     int enterprise_number;
     int enterprise_number_len = 4;
+    char temp[10] ={0};
 
     // we receive option value in  [enterprise_number(4 bytes) + vendor-class-data field] format. Parse enterprise_number and covnert to int.
     strncpy(enterprise_number_string, *optionVal, enterprise_number_len);
     enterprise_number = atoi(enterprise_number_string);
 
     //lenth to store option in hex (0x...) format
-    // 2 (length for "0x") + length to store option value in %02X (2 * (len of paddingBuf + len of *optionVal + len of null)) + 1 (null)
-    int optlen = 2 + 2 * (2 + strlen(*optionVal) + 1) + 1;
+    // 2 (length for "0x") + length to store option value in %02X (2 * (len of null + length to store data_field_length  + len of *optionVal + len of null)) + 1 (null)
+    int optlen = 2 + 2 * (1 + 1 + strlen(*optionVal) + 1) + 1;
     char * option16 = malloc (optlen);
 
     memset (option16, 0 , optlen);
@@ -53,17 +53,18 @@ static void convert_option16_to_hex(char **optionVal)
     //convert and store the values in hex format
     snprintf(option16, 11, "0x%08X", enterprise_number);
 
-    for(int i=0; i<2; i++)
-    {
-        char temp[3] ={'\0'};
-        snprintf(temp, 3, "%02X", paddingBuf[i]);
-        strncat(option16,temp,3);
-    }
+    //append null
+    snprintf(temp, 3, "%02X", '\0');
+    strncat(option16,temp,3);
 
     int data_field_length = (int)strlen(*optionVal+enterprise_number_len);
+
+    //append length of data_field_length+null
+    sprintf(temp, "%02X", (data_field_length+1));
+    strncat(option16,temp,3);
+
     for(int i=0; i<=data_field_length; i++)
     {
-        char temp[3] ={'\0'};
         snprintf(temp, 3, "%02X", (*optionVal)[enterprise_number_len+i]);
         strncat(option16,temp,3);
     }
