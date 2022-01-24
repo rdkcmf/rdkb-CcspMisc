@@ -114,7 +114,7 @@ pid_t start_dhcpv6_client (dhcp_params * params)
     dhcp_opt_list * send_opt_list = NULL;
 
     DBG_PRINT("%s %d: Collecting DHCP GET/SEND Request\n", __FUNCTION__, __LINE__);
-    if (get_dhcpv6_opt_list(&req_opt_list, &send_opt_list) == FAILURE)
+    if ((params->ifType == WAN_LOCAL_IFACE) && (get_dhcpv6_opt_list(&req_opt_list, &send_opt_list)) == FAILURE)
     {
         DBG_PRINT("%s %d: failed to get option list from platform hal\n", __FUNCTION__, __LINE__);
         sysevent_close(dhcp_sysevent_fd, dhcp_sysevent_token);

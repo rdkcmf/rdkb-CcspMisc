@@ -27,6 +27,55 @@
 extern token_t dhcp_sysevent_token;
 extern int dhcp_sysevent_fd;
 
+
+static int copy_file (char * src, char * dst)
+{
+    if ((src == NULL) || (dst == NULL))
+    {
+        DBG_PRINT("%s %d: Invalid args..\n", __FUNCTION__, __LINE__);
+        return FAILURE;
+    }
+
+    FILE * fin = NULL;
+    FILE * fout = NULL;
+
+    fout = fopen(dst, "wb");
+    if (fout == NULL)
+    {
+        DBG_PRINT("%s %d: failed to open file %s\n", __FUNCTION__, __LINE__, dst);
+        return FAILURE;
+    }
+    
+    fin = fopen(src, "r");
+
+    if (fin == NULL)
+    {
+        DBG_PRINT("%s %d: failed to open file %s\n", __FUNCTION__, __LINE__, src);
+        fclose (fout);
+        return FAILURE;
+    }
+
+    ssize_t nread;
+    size_t len = 0;
+    char *line = NULL;
+
+    while ((nread = getline(&line, &len, fin)) != -1) 
+    {
+        fwrite(line, nread, 1, fout);
+    }
+
+    if (line)
+    {
+        free(line);
+    }
+    fclose(fin);
+    fclose(fout);
+
+    DBG_PRINT ("%s %d: successfully copied content from %s to %s\n", __FUNCTION__, __LINE__, src, dst);
+    return SUCCESS;
+
+}
+
 static void convert_option16_to_hex(char **optionVal)
 {
     if(*optionVal == NULL)
@@ -75,38 +124,64 @@ static void convert_option16_to_hex(char **optionVal)
 }
 
 /*
- * dibbler_get_options ()
- * @description: This function will construct conf file with all the dibbler GET options
- * @params     : req_opt_list - input list of DHCPv6 GET options, send_opt_list - input list of DHCPv6 send options
+ * dibbler_client_prepare_config ()
+ * @description: This function will construct conf file to configure dibbler-client
+ * @params     : req_opt_list - input list of DHCPv6 GET options
+                 send_opt_list - input list of DHCPv6 send options
+                 
  * @return     : SUCCESS if config file written successfully, else returns FAILURE
  *
  */
-static int dibbler_get_options (dhcp_opt_list * req_opt_list, dhcp_opt_list * send_opt_list)
+static int dibbler_client_prepare_config (dibbler_client_info * client_info)
 {
+    if (client_info == NULL)
+    {
+        DBG_PRINT("%s %d: Invalid args..\n", __FUNCTION__, __LINE__);
+        return FAILURE;
+    }
+
+    dhcp_params * param = client_info->if_param;
+    dhcp_opt_list * req_opt_list = client_info->req_opt_list;
+    dhcp_opt_list * send_opt_list = client_info->send_opt_list;
+
+    if (param == NULL)
+    {
+        DBG_PRINT("%s %d: Invalid args..\n", __FUNCTION__, __LINE__);
+        return FAILURE;
+    }
+
     FILE * fin;
     FILE * fout;
     char * line = NULL;
     size_t len = 0;
     ssize_t read;
-    char mapt_config[BUFLEN_16] = {0};
     bool optionTempFound = 0;
     bool option20Found = 0;
 
-    if (req_opt_list == NULL)
-    {
-        DBG_PRINT("%s %d: No req option sent to dibbler.\n", __FUNCTION__, __LINE__);
-        return FAILURE;
-    }
+
     DBG_PRINT("%s %d: \n", __FUNCTION__, __LINE__);
     char args [BUFLEN_128] = {0};
-    char buf [BUFLEN_16] = {0};
 
     fout = fopen(DIBBLER_TEMPLATE_CONFIG_FILE, "wb");
     fin = fopen(DIBBLER_TMP_CONFIG_FILE, "r");
-    if (fin && fout)
+    if (fin == NULL || fout == NULL)
     {
-        while ((read = getline(&line, &len, fin)) != -1)
+        DBG_PRINT("%s %d: failed to open files %s %s\n", __FUNCTION__, __LINE__, DIBBLER_TEMPLATE_CONFIG_FILE, DIBBLER_TMP_CONFIG_FILE);
+        return FAILURE;
+    }
+
+    while ((read = getline(&line, &len, fin)) != -1)
+    {
+        if (strstr(line, "iface "))
         {
+            memset (&args, 0, sizeof(args));
+            snprintf (args, sizeof(args), "\niface %s {\n", param->ifname);
+            fputs(args, fout);
+            continue;
+        }
+        if (param->ifType == WAN_LOCAL_IFACE)
+        {
+            // configuration options for local interface
             if (strstr(line, "option"))
             {
                 if (!optionTempFound)
@@ -116,8 +191,6 @@ static int dibbler_get_options (dhcp_opt_list * req_opt_list, dhcp_opt_list * se
                     while (opt_list)
                     {
                         memset (&args, 0, BUFLEN_128);
-                        memset (&buf, 0, BUFLEN_16);
-                        memset (&mapt_config, 0, BUFLEN_16);
 
                         if (opt_list->dhcp_opt == DHCPV6_OPT_23)
                         {
@@ -161,7 +234,7 @@ static int dibbler_get_options (dhcp_opt_list * req_opt_list, dhcp_opt_list * se
                         }
                         opt_list = opt_list->next;
                     }
-                        
+
                 }
             }
             else
@@ -169,42 +242,50 @@ static int dibbler_get_options (dhcp_opt_list * req_opt_list, dhcp_opt_list * se
                 fputs(line, fout);
             }
         }
-        if(option20Found)
-        {
-            snprintf (args, BUFLEN_128, "\n%s\n", "reconfigure-accept 1");
-            fputs(args, fout);
-        }
-        unlink(DIBBLER_CONFIG_FILE);
-        symlink(DIBBLER_TEMPLATE_CONFIG_FILE, DIBBLER_CONFIG_FILE);
-        //memset (&args, 0, BUFLEN_128);
-        //snprintf (args, BUFLEN_128, "ln -fs %s %s ", DIBBLER_TEMPLATE_CONFIG_FILE, DIBBLER_CONFIG_FILE);
-        //system(args);
+    }
+    if(option20Found)
+    {
+        snprintf (args, BUFLEN_128, "\n%s\n", "reconfigure-accept 1");
+        fputs(args, fout);
+    }
 
-        fclose(fin);
-        fclose(fout);
-        if (line)
-        {
-            free(line);
-        }
+    fclose(fin);
+    fclose(fout);
+    if (line)
+    {
+        free(line);
+    }
+
+    // write the config path into the buffer
+    snprintf(client_info->config_path, sizeof(client_info->config_path), "%s%s", DIBBLER_DFT_PATH, param->ifname);
+
+    struct stat st = {0};
+
+    if (stat(client_info->config_path, &st) == -1) 
+    {
+        // directory does not exists, so create it
+        mkdir(client_info->config_path, 0644);
+        DBG_PRINT ("%s %d: created directory %s\n", __FUNCTION__, __LINE__, client_info->config_path);
+    }
+
+    // copy the file to new location
+    char file_path[BUFLEN_128] = {0};
+    int ret = snprintf(file_path, sizeof(file_path), "%s/%s", client_info->config_path, DIBBLER_CLIENT_CONFIG_FILE);
+    if (ret <= 0)
+    {
+        DBG_PRINT("%s %d: unable to contruct filepath\n", __FUNCTION__, __LINE__);
+        return FAILURE;
+    }
+
+    if (copy_file (DIBBLER_TEMPLATE_CONFIG_FILE, file_path) != SUCCESS)
+    {
+        DBG_PRINT("%s %d: unable to copy %s to %s due to %s\n", __FUNCTION__, __LINE__, DIBBLER_TEMPLATE_CONFIG_FILE, file_path, strerror(errno));
+        return FAILURE;
     }
 
     DBG_PRINT("%s %d: sucessfully Updated %s file with Request Options \n", __FUNCTION__, __LINE__, DIBBLER_TEMPLATE_CONFIG_FILE);
     return SUCCESS;
 
-}
-
-
-/*
- * dibbler_get_other_args ()
- * @description: This function will construct a buffer with all other dibbler options
- * @params     : params - input parameters to udhcpc like interface
- * @return     : no other options
- *
- */
-static int dibbler_get_other_args (dhcp_params * params)
-{
-    DBG_PRINT("%s %d: Not Supporting Any Other Options, Interface %s \n", __FUNCTION__, __LINE__, params->ifname);
-    return SUCCESS;
 }
 
 /*
@@ -225,22 +306,25 @@ pid_t start_dibbler (dhcp_params * params, dhcp_opt_list * req_opt_list, dhcp_op
         return FAILURE;
     }
 
-    DBG_PRINT("%s %d: Constructing REQUEST and SEND option args to dibbler.\n", __FUNCTION__, __LINE__);
-    if (dibbler_get_options(req_opt_list,send_opt_list) != SUCCESS)
+    dibbler_client_info client_info;
+
+    memset (&client_info, 0, sizeof(dibbler_client_info));
+    client_info.if_param = params;
+    client_info.req_opt_list = req_opt_list;
+    client_info.send_opt_list = send_opt_list;
+
+    if ((dibbler_client_prepare_config(&client_info) != SUCCESS) && (client_info.config_path != NULL))
     {
         DBG_PRINT("%s %d: Unable to get DHCPv6 REQ OPT.\n", __FUNCTION__, __LINE__);
         return FAILURE;
     }
 
-    DBG_PRINT("%s %d: Constructing other option args to dibbler.\n", __FUNCTION__, __LINE__);
-    if (dibbler_get_other_args(params) != SUCCESS)
-    {
-        DBG_PRINT("%s %d: Unable to get DHCPv6 SEND OPT.\n", __FUNCTION__, __LINE__);
-        return FAILURE;
-    }
+    DBG_PRINT("%s %d: Starting dibbler with config %s\n", __FUNCTION__, __LINE__, client_info.config_path);
+    
+    char cmd_args[BUFLEN_256] = {0};
+    snprintf(cmd_args, sizeof(cmd_args), "%s -w %s", DIBBLER_CLIENT_RUN_CMD, client_info.config_path);
 
-    DBG_PRINT("%s %d: Starting dibbler.\n", __FUNCTION__, __LINE__);
-    pid_t ret = start_exe(DIBBLER_CLIENT_PATH, DIBBLER_CLIENT_RUN_CMD);
+    pid_t ret = start_exe(DIBBLER_CLIENT_PATH, cmd_args);
     if (ret <= 0)
     {
         DBG_PRINT("%s %d: unable to start dibbler-client %d.\n", __FUNCTION__, __LINE__, ret);

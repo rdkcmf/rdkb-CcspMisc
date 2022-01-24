@@ -28,10 +28,19 @@
 #define DIBBLER_CLIENT_PATH               "/usr/sbin/"DIBBLER_CLIENT
 #define DIBBLER_CLIENT_RUN_CMD            "start"
 #define DIBBLER_CLIENT_CMD                DIBBLER_CLIENT" "DIBBLER_CLIENT_RUN_CMD
-#define DIBBLER_CONFIG_FILE          "/etc/dibbler/client.conf"
+#define DIBBLER_DFT_PATH                  "/etc/dibbler/"
+#define DIBBLER_CLIENT_CONFIG_FILE        "client.conf"
+#define DIBBLER_CLIENT_CONFIG_FILE_PATH   DIBBLER_DFT_PATH DIBBLER_CLIENT_CONFIG_FILE
 #define DIBBLER_TMP_CONFIG_FILE      "/tmp/dibbler/client-tmp.conf"
 #define DIBBLER_TEMPLATE_CONFIG_FILE "/tmp/dibbler/client-template.conf"
 #define DIBBLER_CLIENT_PIDFILE       "/tmp/dibbler/client.pid"
 #define DIBBLER_CLIENT_TERMINATE_TIMEOUT  (5 * MSECS_IN_SEC)
+
+typedef struct {
+    dhcp_params * if_param;
+    dhcp_opt_list * req_opt_list;
+    dhcp_opt_list * send_opt_list;
+    char config_path [BUFLEN_128];
+} dibbler_client_info;
 
 pid_t start_dibbler (dhcp_params * params, dhcp_opt_list * req_opt_list, dhcp_opt_list * send_opt_list);

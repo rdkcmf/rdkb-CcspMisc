@@ -30,6 +30,7 @@
 #include <dirent.h>
 #include <sys/wait.h>
 #include "syscfg/syscfg.h"
+#include <sys/stat.h>
 #include "platform_hal.h"
 
 #define TRUE_STR               "true"
@@ -70,8 +71,15 @@
 }\
 
 #define UNUSED_VARIABLE(x) (void)(x)
+
+typedef enum {
+    WAN_LOCAL_IFACE = 1,
+    WAN_REMOTE_IFACE,
+} IfaceType;
+
 typedef struct dhcp_opt {
     char * ifname;
+    IfaceType ifType;
 } dhcp_params;
 
 pid_t start_dhcpv4_client (dhcp_params * params);

@@ -180,14 +180,17 @@ static int udhcpc_get_other_args (char * buff, dhcp_params * params)
         strcat (buff, pidfile);
     }
 
-    // Add -s <servicefile>
-    char servicefile[BUFLEN_32] = {0};
+    if (params->ifType == WAN_LOCAL_IFACE)
+    {
+        // Add -s <servicefile>
+        char servicefile[BUFLEN_32] = {0};
 #ifdef UDHCPC_SCRIPT_FILE
-    snprintf (servicefile, sizeof(servicefile), "-s %s ", UDHCPC_SERVICE_SCRIPT_FILE);
+        snprintf (servicefile, sizeof(servicefile), "-s %s ", UDHCPC_SERVICE_SCRIPT_FILE);
 #else
-    snprintf (servicefile, sizeof(servicefile), "-s %s ", UDHCPC_SERVICE_EXE);
+        snprintf (servicefile, sizeof(servicefile), "-s %s ", UDHCPC_SERVICE_EXE);
 #endif
-    strcat (buff, servicefile);
+        strcat (buff, servicefile);
+    }
 
     // Add udhcpc process behavior
 #ifdef UDHCPC_RUN_IN_FOREGROUND
@@ -226,14 +229,14 @@ pid_t start_udhcpc (dhcp_params * params, dhcp_opt_list * req_opt_list, dhcp_opt
     char buff [BUFLEN_512] = {0};
 
     DBG_PRINT("%s %d: Constructing REQUEST option args to udhcpc.\n", __FUNCTION__, __LINE__);
-    if (udhcpc_get_req_options(buff, req_opt_list) != SUCCESS)
+    if ((req_opt_list != NULL) && (udhcpc_get_req_options(buff, req_opt_list)) != SUCCESS)
     {
         DBG_PRINT("%s %d: Unable to get DHCPv4 REQ OPT.\n", __FUNCTION__, __LINE__);
         return FAILURE;
     }
 
     DBG_PRINT("%s %d: Constructing SEND option args to udhcpc.\n", __FUNCTION__, __LINE__);
-    if (udhcpc_get_send_options(buff, send_opt_list) != SUCCESS)
+    if ((send_opt_list != NULL) && (udhcpc_get_send_options(buff, send_opt_list) != SUCCESS))
     {
         DBG_PRINT("%s %d: Unable to get DHCPv4 SEND OPT.\n", __FUNCTION__, __LINE__);
         return FAILURE;
