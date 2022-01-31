@@ -20,13 +20,13 @@
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
-#ifdef UTC_ENABLE
+#ifdef UTC_ENABLE 
 #include "platform_hal.h"
 #include <stdlib.h>
 #include <unistd.h>
 #endif
 #include "safec_lib_common.h"
-
+#include "secure_wrapper.h"
 #define DATE_MAX_STR_SIZE 26
 //#define DATE_FMT "%FT%TZ%z"
 #define DATE_FMT "%FT%TZ"
@@ -47,26 +47,25 @@ time_t getOffset()
 {
     time_t off = 0;
 #ifdef UTC_ENABLE
-    char a[100]; char cmd[100];
+    char a[100];
     FILE *fp;
     if(!access("/nvram/ETHWAN_ENABLE", 0))
     {
-        snprintf(cmd,sizeof(cmd),"sysevent get ipv4-timeoffset");
-        fp = popen(cmd, "r");
+        fp = v_secure_popen("r","sysevent get ipv4-timeoffset");
         /* CID:60154 Dereference null return value*/
         if (!fp) {
            perror("sysevent get ipv4-timeoffset doesn't exist");
            return off;
         }
         fgets(a,sizeof(a),fp);
-        pclose(fp);
-        off = atoi(a + 1);
+        v_secure_pclose(fp);
+        off = atoi(a + 1);      
     }
     else
     {
     platform_hal_getTimeOffSet(a);
-    off = atoi(a);
-    }
+    off = atoi(a);  
+    }   
 #endif
     return off;
 }

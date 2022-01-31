@@ -21,4 +21,4 @@ bin_PROGRAMS = LTime
 
 LTime_SOURCES = LTime.c
 
-LTime_LDFLAGS = -lhal_platform
+LTime_LDFLAGS = -lhal_platform -lsecure_wrapper

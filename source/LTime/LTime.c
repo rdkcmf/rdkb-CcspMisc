@@ -19,6 +19,7 @@
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
+#include "secure_wrapper.h"
 #ifdef UTC_ENABLE
 #include <stdlib.h>
 #include <unistd.h>
@@ -65,16 +66,15 @@ static int hexToInt(char s[])
 
 int getTimeOffsetFromSysevent(char *name, int version)
 {
-    char a[100];char cmd[100];
+    char a[100];
     FILE *fp;
     int off = -1;
-    snprintf(cmd,sizeof(cmd),"sysevent get %s",name);
-    fp = popen(cmd, "r");
+    fp = v_secure_popen("r","sysevent get %s",name);
     if(fp != NULL)
     {
         fgets(a,sizeof(a),fp);
         a[strlen(a) - 1] = '\0';
-        pclose(fp);
+        v_secure_pclose(fp);           
         if(a[0] != '\0')
         {
             if(a[0] != '@')

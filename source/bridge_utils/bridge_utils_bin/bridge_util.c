@@ -237,25 +237,27 @@ int checkIfExists(char* iface_name)
 // Function to check if interface is attached to bridge
 int checkIfExistsInBridge(char* iface_name, char *bridge_name)
 {
-	char cmd[128] = {0} ;
+	FILE *fp = NULL;
+	int ret =0;
 	char *token = NULL;
 	char if_list[IFLIST_SIZE] = {'\0'};
 	if ( 1 == ovsEnable )
 	{
-		snprintf(cmd,sizeof(cmd),"ovs-vsctl list-ifaces %s | grep %s | tr \"\n\" \" \" ",bridge_name, iface_name);
+		fp = v_secure_popen("r","ovs-vsctl list-ifaces %s | grep %s | tr '\n' ' ' ",bridge_name, iface_name);
 	}
 	else
 	{
-		snprintf(cmd,sizeof(cmd),"brctl show %s | sed '1d' | awk '{print $NF}' | grep %s | tr \"\n\" \" \" ",bridge_name, iface_name);
+		fp = v_secure_popen("r","brctl show %s | sed '1d' | awk '{print $NF}' | grep %s | tr '\n' ' ' ",bridge_name, iface_name);
 	}
-	FILE *fp = NULL;
-	fp = popen(cmd, "r");
 	if ( fp != NULL )
 	{
 		fgets(if_list,IFLIST_SIZE-1,fp);
 		if_list[strlen(if_list)-1] = '\0';
-		pclose(fp);
-		fp = NULL;
+		ret = v_secure_pclose(fp);
+		if(ret !=0)
+		{
+	            bridge_util_log("Error in closing pipe ret val [%d] \n",ret);
+		}
 	}
 	if(strlen(if_list) > 1)
 	{
@@ -373,9 +375,9 @@ void enableMoCaIsolationSettings (bridgeDetails *bridgeInfo)
 	char paramName[256]={0};
 	int retPsmGet = CCSP_SUCCESS;
 	char *paramValue = NULL;
-        int ret =0;
+        int ret = 0;
 	char ipaddr[64] = {0} ;
-	int  mocaIsolationL3NetIdx = 0;
+	int  mocaIsolationL3NetIdx = 0;  
 
 	snprintf(paramName,sizeof(paramName), mocaIsolationL3Net);
 	retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, paramName, NULL, &paramValue);
@@ -855,8 +857,6 @@ int HandlePreConfigGeneric(bridgeDetails *bridgeInfo,int InstanceNumber)
                                                                 {
                                                                      bridge_util_log("Failed in executing the command via v_secure_system ret val: %d \n", ret);
                                                                 }
-
-												
 							}    				
 						}
 
@@ -944,7 +944,7 @@ void assignIpToBridge(char* bridgeName, char* l3netName)
     char paramName[256]={0};
     int retPsmGet = CCSP_SUCCESS;
     char *paramValue = NULL;
-    int ret =0 ;
+    int ret = 0;
     char ipaddr[64] = {0} ;
     char subNetMask[64] = {0};
     int L3NetIdx = 0;
@@ -1002,7 +1002,6 @@ void assignIpToBridge(char* bridgeName, char* l3netName)
         {
             bridge_util_log("Failure in executing command via v_secure_system. ret val: %d \n", ret);
         }
-
     }
     else
     {
@@ -1012,7 +1011,6 @@ void assignIpToBridge(char* bridgeName, char* l3netName)
         {
             bridge_util_log("Failure in executing command via v_secure_system. ret val: %d \n", ret);
         }
-
     }
     return;
 }
@@ -1552,34 +1550,25 @@ int DeleteBrInterface()
 
 void getCurrentIfList(char *bridge, char *current_if_list)
 {
-	char cmd[128] = {0} ;
-	if ( 1 == ovsEnable )
-	{
-		snprintf(cmd,sizeof(cmd),"ovs-vsctl list-ifaces %s | tr \"\n\" \" \" ",bridge);
-	
+        FILE *fp = NULL;
+        int ret = 0;
+	if ( 1 == ovsEnable ) {
+	    fp = v_secure_popen("r","ovs-vsctl list-ifaces %s | tr '\n' ' ' ",bridge);
 	}
-	else
-	{	
-		if ( 1 == bridgeUtilEnable )
-		{
-			snprintf(cmd,sizeof(cmd),"brctl show %s | sed '1d' | awk '{print $NF}' | tr \"\n\" \" \" ",bridge);
-		}
-		else
-		{
-			return;
-		}
-
+	else if ( 1 == bridgeUtilEnable ) {
+	    fp = v_secure_popen("r","brctl show %s | sed '1d' | awk '{print $NF}' | tr '\n' ' ' ",bridge);
 	}
-
-	 FILE *fp = NULL;
-	 fp = popen(cmd, "r");
+	else {    
+	    return;
+	}
 	 if ( fp != NULL )
 	 {
 	 	fgets(current_if_list,TOTAL_IFLIST_SIZE-1,fp);
-	 	pclose(fp);
-	 	fp = NULL;
+	 	ret = v_secure_pclose(fp);
+                if(ret !=0) {
+		    bridge_util_log("%s: Error in closing pipe! [%d]\n",__func__,ret);
+		}
 	 }
-
 	 return;
 }
 
