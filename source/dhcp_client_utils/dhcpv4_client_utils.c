@@ -156,3 +156,26 @@ pid_t start_dhcpv4_client (dhcp_params * params)
     return pid;
 
 }
+
+
+/*
+ * stop_dhcpv4_client ()
+ * @description: This API will stop DHCP client running for interface specified in parameter
+ * @params     : input parameter to pass interface specific arguments
+ * @return     : SUCCESS if client is filled, else returns failure
+ *
+ */
+int stop_dhcpv4_client (dhcp_params * params)
+{
+    if (params == NULL)
+    {
+        DBG_PRINT("%s %d: Invalid args..\n", __FUNCTION__, __LINE__);
+        return FAILURE;
+    }
+
+#ifdef DHCPV4_CLIENT_UDHCPC
+    return stop_udhcpc (params);
+#endif
+    return SUCCESS;
+
+}

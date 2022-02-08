@@ -23,5 +23,6 @@
 #define UDHCPC_SERVICE_SCRIPT_FILE       "/etc/udhcpc.script"
 #define UDHCPC_SERVICE_EXE               "/usr/bin/service_udhcpc"
 #define UDHCP_PIDFILE_PATTERN            "-p "UDHCP_PIDFILE" "
+#define UDHCPC_TERMINATE_TIMEOUT         (5 * MSECS_IN_SEC)
 
 pid_t start_udhcpc (dhcp_params * params, dhcp_opt_list * req_opt_list, dhcp_opt_list * send_opt_list);

@@ -254,5 +254,42 @@ pid_t start_udhcpc (dhcp_params * params, dhcp_opt_list * req_opt_list, dhcp_opt
     return start_exe(UDHCPC_CLIENT_PATH, buff);
 
 }
+
+/*
+ * stop_udhcpc ()
+ * @description: This function will stop udhcpc instance that is running for interface name passed in params.ifname
+ * @params     : params - input parameter to pass interface specific arguments
+ * @return     : returns the SUCCESS or FAILURE
+ *
+ */
+int stop_udhcpc (dhcp_params * params)
+{
+    if ((params == NULL) || (params->ifname == NULL))
+    {
+        DBG_PRINT("%s %d: Invalid args..\n", __FUNCTION__, __LINE__);
+        return FAILURE;
+    }
+
+    pid_t pid = 0;
+    char cmdarg[BUFLEN_32] = {0};
+
+    snprintf(cmdarg, sizeof(cmdarg), "%s", params->ifname);
+    pid = get_process_pid(UDHCPC_CLIENT, cmdarg);
+
+    if (pid <= 0)
+    {
+        DBG_PRINT("%s %d: unable to get pid of %s\n", __FUNCTION__, __LINE__, UDHCPC_CLIENT);
+        return FAILURE;
+    }
+
+    if (signal_process(pid, SIGUSR2) != RETURN_OK)
+    {
+        DBG_PRINT("%s %d: unable to send signal to pid %d\n", __FUNCTION__, __LINE__, pid);
+        return FAILURE;
+    }
+
+    return collect_waiting_process(pid, UDHCPC_TERMINATE_TIMEOUT);
+
+}
 #endif  // DHCPV4_CLIENT_UDHCPC
 

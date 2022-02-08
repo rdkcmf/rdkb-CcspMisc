@@ -44,3 +44,4 @@ typedef struct {
 } dibbler_client_info;
 
 pid_t start_dibbler (dhcp_params * params, dhcp_opt_list * req_opt_list, dhcp_opt_list * send_opt_list);
+int stop_dibbler (dhcp_params * params);

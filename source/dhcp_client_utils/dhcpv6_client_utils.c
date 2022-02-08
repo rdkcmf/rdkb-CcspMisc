@@ -134,3 +134,23 @@ pid_t start_dhcpv6_client (dhcp_params * params)
     return pid;
 
 }
+
+/*
+ * stop_dhcpv6_client ()
+ * @description: This API will stop dhcpv6 client program for interface passed in paramter.
+ * @params     : input parameter to pass interface specific arguments
+ * @return     : returns SUCCESS if killed else returns FAILURE
+ *
+ */
+int stop_dhcpv6_client (dhcp_params * params)
+{
+    if (params == NULL)
+    {
+        DBG_PRINT("%s %d: Invalid args..\n", __FUNCTION__, __LINE__);
+        return 0;
+    }
+
+    return stop_dibbler (params);
+
+}
+

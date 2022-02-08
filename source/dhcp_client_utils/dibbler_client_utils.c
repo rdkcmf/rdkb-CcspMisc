@@ -359,7 +359,46 @@ pid_t start_dibbler (dhcp_params * params, dhcp_opt_list * req_opt_list, dhcp_op
     }
 
     DBG_PRINT("%s %d: Started dibbler-client. returning pid..\n", __FUNCTION__, __LINE__);
-    return get_process_pid (DIBBLER_CLIENT);
+    return get_process_pid (DIBBLER_CLIENT, NULL);
 
 }
+
+/*
+ * stop_dibbler ()
+ * @description: This function will stop dibbler instance that is running for interface name passed in params.ifname
+ * @params     : params - input parameter to pass interface specific arguments
+ * @return     : returns the SUCCESS or FAILURE
+ *
+ */
+int stop_dibbler (dhcp_params * params)
+{
+    if ((params == NULL) || (params->ifname == NULL))
+    {
+        DBG_PRINT("%s %d: Invalid args..\n", __FUNCTION__, __LINE__);
+        return FAILURE;
+    }
+
+    pid_t pid = 0;
+    char cmdarg[BUFLEN_32] = {0};
+
+    snprintf(cmdarg, sizeof(cmdarg), "%s%s", DIBBLER_DFT_PATH, params->ifname);
+    pid = get_process_pid(DIBBLER_CLIENT, cmdarg);
+
+    if (pid <= 0)
+    {
+        DBG_PRINT("%s %d: unable to get pid of %s\n", __FUNCTION__, __LINE__, DIBBLER_CLIENT);
+        return FAILURE;
+    }
+
+    if (signal_process(pid, SIGTERM) != RETURN_OK)
+    {
+        DBG_PRINT("%s %d: unable to send signal to pid %d\n", __FUNCTION__, __LINE__, pid);
+        return FAILURE;
+    }
+
+    return SUCCESS;
+
+}
+
+
 #endif  // DHCPV6_CLIENT_DIBBLER	

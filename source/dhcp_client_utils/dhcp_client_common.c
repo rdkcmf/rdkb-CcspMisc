@@ -20,6 +20,35 @@
 #include "dhcp_client_utils.h"
 
 /*
+ * signal_process ()
+ * @description: some process like dibbler spawns a new thread and the main thread exits. 
+                 this function can be called to collect the zombie child
+ * @params     : pid - pid of the process to collect
+                 timeout - time this function can wait till the child is ready to collect
+ * @return     : if child collected then SUCCESS, else FAILURE
+ *
+ */
+int signal_process (pid_t pid, int signal)
+{
+    if ((pid <= 0) || (signal < 0))
+    {
+        DBG_PRINT("%s %d: Invalid args..\n", __FUNCTION__, __LINE__);
+        return FAILURE;
+    }
+
+    int ret;
+
+    if ((ret = kill(pid, signal)) < 0)
+    {
+        DBG_PRINT("%s %d: Invalid pid %d or signal %d\n", __FUNCTION__, __LINE__, pid, signal);
+        return FAILURE;
+    }
+
+    return SUCCESS;
+
+}
+
+/*
  * collect_waiting_process ()
  * @description: some process like dibbler spawns a new thread and the main thread exits. 
                  this function can be called to collect the zombie child
@@ -98,35 +127,80 @@ int collect_waiting_process(int pid, int timeout)
  */
 static int strtol64(const char *str, char **endptr, int32_t base, int64_t *val)
 {
-   int ret = SUCCESS;
-   char *localEndPtr=NULL;
+    int ret = SUCCESS;
+    char *localEndPtr=NULL;
 
-   errno = 0;  /* set to 0 so we can detect ERANGE */
+    errno = 0;  /* set to 0 so we can detect ERANGE */
 
-   *val = strtoll(str, &localEndPtr, base);
+    *val = strtoll(str, &localEndPtr, base);
 
-   if ((errno != 0) || (*localEndPtr != '\0'))
-   {
-      *val = 0;
-      ret = FAILURE;
-   }
+    if ((errno != 0) || (*localEndPtr != '\0'))
+    {
+        *val = 0;
+        ret = FAILURE;
+    }
 
-   if (endptr != NULL)
-   {
-      *endptr = localEndPtr;
-   }
+    if (endptr != NULL)
+    {
+        *endptr = localEndPtr;
+    }
 
-   return ret;
+    return ret;
+}
+
+/*
+ * find_strstr ()
+ * @description: /proc/pid/cmdline contains command line args in format "args1\0args2".
+                 This function will find substring even if there is a end of string character 
+ * @params     : basestr - base string eg: "hello\0world"
+                 basestr_len - length of basestr eg: 11 for "hello\0world"
+                 substr - sub string eg: "world"
+                 substr_len - length of substr eg: 5 for "world"
+ * @return     : SUCCESS if matches, else returns failure
+ *
+ */
+int find_strstr (char * basestr, int basestr_len, char * substr, int substr_len)
+{
+    if ((basestr == NULL) || (substr == NULL))
+    {
+        return FAILURE;
+    }
+
+    if (basestr_len <= substr_len)
+    {
+        return FAILURE;
+    }
+
+    int i = 0, j = 0;
+
+    for (i = 0; i < basestr_len; i++)
+    {
+        if (basestr[i] == substr[j])
+        {
+            for (; ((j < substr_len) && (i < basestr_len)); j ++, i++)
+            {
+                if (basestr[i] != substr[j])
+                    continue;
+
+                if (j == substr_len - 1)
+                    return SUCCESS;
+            }
+        }
+    }
+    return FAILURE;
 }
 
 /*
  * check_proc_entry_for_pid ()
  * @description: check the contents of /proc directory to match the process name
  * @params     : name - process name
+                 args - optional parameter - can check running process argument and return
+                 eg: if 2 udhcpc are running 1) udhcpc -i erouter0 2) udhcpc -i erouter1
+                 if args == "-ierouter0", pid of first udhcpc is returned
  * @return     : returns the pid if proc entry exists
  *
  */
-static int check_proc_entry_for_pid (char * name)
+static int check_proc_entry_for_pid (char * name, char * args)
 {
     if (name == NULL)
     {
@@ -141,6 +215,7 @@ static int check_proc_entry_for_pid (char * name)
     int pid, rc, p, i;
     int rval = 0;
     char processName[BUFLEN_256];
+    char cmdline[512] = {0};
     char filename[BUFLEN_256];
     char status = 0;
 
@@ -159,41 +234,69 @@ static int check_proc_entry_for_pid (char * name)
             fp = fopen(filename, "r");
             if (fp == NULL)
             {
-                DBG_PRINT("%s %d: could not open %s\n", __FUNCTION__, __LINE__, filename);
                 continue;
             }
-                memset(processName, 0, sizeof(processName));
-                rc = fscanf(fp, "%d (%255s %c ", &p, processName, &status);
-                fclose(fp);
+            memset(processName, 0, sizeof(processName));
+            rc = fscanf(fp, "%d (%255s %c ", &p, processName, &status);
+            fclose(fp);
 
-                if (rc >= 2)
+            if (rc >= 2)
+            {
+                i = strlen(processName);
+                if (i > 0)
                 {
-                    i = strlen(processName);
-                    if (i > 0)
-                    {
-                        if (processName[i-1] == ')')
-                            processName[i-1] = 0;
-                    }
+                    if (processName[i-1] == ')')
+                        processName[i-1] = 0;
                 }
+            }
 
-                if (!strcmp(processName, name))
+            if (!strcmp(processName, name))
+            {
+                if ((status == 'R') || (status == 'S'))
                 {
-                    if ((status == 'R') || (status == 'S'))
+                    if (args != NULL)
                     {
+                        // argument to be verified before returning pid
+                        DBG_PRINT("%s %d: %s running in pid %d.. checking for cmdline param %s\n", __FUNCTION__, __LINE__, name, pid, args);
+                        snprintf(filename, sizeof(filename), "/proc/%d/cmdline", pid);
+                        fp = fopen(filename, "r");
+                        if (fp == NULL)
+                        {
+                            DBG_PRINT("%s %d: could not open %s\n", __FUNCTION__, __LINE__, filename);
+                            continue;
+                        }
+                        DBG_PRINT("%s %d: opening file %s\n", __FUNCTION__, __LINE__, filename);
+
+                        memset (cmdline, 0, sizeof(cmdline));
+                        if (fread(cmdline, 1, sizeof(cmdline), fp) > 0)
+                        {
+                            DBG_PRINT("%s %d: comparing cmdline from proc:%s with %s\n", __FUNCTION__, __LINE__, cmdline, args);
+                            if (find_strstr(cmdline, sizeof(cmdline), args, strlen(args)) == SUCCESS)
+                            {
+                                rval = pid;
+                                found = true;
+                            }
+                        }
+
+                        fclose(fp);
+                    }
+                    else
+                    {
+                        // no argument passed, so return pid of running process
                         rval = pid;
                         found = true;
                     }
-                    else 
-                    {
-                        DBG_PRINT("%s %d: %s running, but is in %c mode\n", __FUNCTION__, __LINE__, filename, status);
-                    }
+                }
+                else 
+                {
+                    DBG_PRINT("%s %d: %s running, but is in %c mode\n", __FUNCTION__, __LINE__, filename, status);
                 }
             }
         }
+    }
 
     closedir(dir);
 
-    DBG_PRINT("%s %d: %s running, in pid %d\n", __FUNCTION__, __LINE__, name, rval);
     return rval;
 
 }
@@ -202,10 +305,12 @@ static int check_proc_entry_for_pid (char * name)
  * get_process_pid ()
  * @description: checks pid of <exe> from /proc fs and returns pid 
  * @params     : name - name of the exeutable file eg:udhcpc
+                 args - args can be argument for the program 
+                    eg:"-ierouter0" for udhcpc - format as seen in /proc fs
  * @return     : if executable is running, returns its pid, else return 0
  *
  */
-pid_t get_process_pid (char * name)
+pid_t get_process_pid (char * name, char * args)
 {
     if (name == NULL)
     {
@@ -218,7 +323,7 @@ pid_t get_process_pid (char * name)
     
     while (waitTime > 1)
     {
-        pid = check_proc_entry_for_pid(name);
+        pid = check_proc_entry_for_pid(name, args);
         
         if (pid != 0)
         {
@@ -230,6 +335,7 @@ pid_t get_process_pid (char * name)
 
     }
 
+    DBG_PRINT("%s %d: %s running, in pid %d\n", __FUNCTION__, __LINE__, name, pid);
     return pid;
 }
 
