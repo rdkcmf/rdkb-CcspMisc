@@ -19,10 +19,17 @@
 
 #include "dibbler_client_utils.h"
 
+#ifdef FEATURE_MAPT
+#include <syscfg/syscfg.h>
+#endif
+
 #ifdef DHCPV6_CLIENT_DIBBLER
 
 #define LOCALHOST         "127.0.0.1"
 #define MAPT_SYSEVENT_NAME "mapt_evt_handler"
+#ifdef FEATURE_MAPT
+#define SYSCFG_MAPT_FEATURE_ENABLE   "MAPT_Enable"
+#endif
 
 extern token_t dhcp_sysevent_token;
 extern int dhcp_sysevent_fd;
@@ -161,6 +168,11 @@ static int dibbler_client_prepare_config (dibbler_client_info * client_info)
 
     DBG_PRINT("%s %d: \n", __FUNCTION__, __LINE__);
     char args [BUFLEN_128] = {0};
+#ifdef FEATURE_MAPT
+    char mapt_feature_enable[BUFLEN_16] = {0};
+
+    syscfg_init();
+#endif
 
     fout = fopen(DIBBLER_TEMPLATE_CONFIG_FILE, "wb");
     fin = fopen(DIBBLER_TMP_CONFIG_FILE, "r");
@@ -199,9 +211,18 @@ static int dibbler_client_prepare_config (dibbler_client_info * client_info)
                         }
                         else if (opt_list->dhcp_opt == DHCPV6_OPT_95)
                         {
-                            /* To add RFC.Feature.MAP-T.Enable flag checking */
-                            snprintf (args, BUFLEN_128, "\n        option 00%d hex \n", opt_list->dhcp_opt);
-                            fputs(args, fout);
+#ifdef FEATURE_MAPT
+                            if (syscfg_get(NULL, SYSCFG_MAPT_FEATURE_ENABLE, mapt_feature_enable, sizeof(mapt_feature_enable)) == 0)
+                            {
+                                if (strncmp(mapt_feature_enable, "true", 4) == 0)
+                                {
+#endif
+                                    snprintf (args, BUFLEN_128, "\n        option 00%d hex \n", opt_list->dhcp_opt);
+                                    fputs(args, fout);
+#ifdef FEATURE_MAPT
+				}
+                            }
+#endif
                         }
                         else
                         {
