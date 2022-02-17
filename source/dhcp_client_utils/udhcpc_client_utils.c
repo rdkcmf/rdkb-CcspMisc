@@ -200,6 +200,8 @@ static int udhcpc_get_other_args (char * buff, dhcp_params * params)
     // exit if lease is not obtained
     strcat (buff, "-n ");
 #endif
+    // send release before exit
+    strcat (buff, "-R ");
 
     return SUCCESS;
 }
