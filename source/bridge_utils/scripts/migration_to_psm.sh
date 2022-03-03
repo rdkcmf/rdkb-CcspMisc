@@ -81,7 +81,7 @@ if [ "xcompleted" != "x`syscfg get psm_migration`" ];then
 		if [ "$BRIDGE_MODE" -gt 0 ];then
 			psmcli set dmsb.l2net.1.Members.Eth "llan0 lbr0"
 		else
-			psmcli set dmsb.l2net.1.Members.Eth "lbr0"
+			psmcli set dmsb.l2net.1.Members.Eth "lbr0 "
 		fi
 		psmcli set dmsb.l2net.1.Port.7.LinkName "llan0"
 		psmcli set dmsb.l2net.2.Members.Moca ""
@@ -92,6 +92,31 @@ if [ "xcompleted" != "x`syscfg get psm_migration`" ];then
 		
 		migrationCompleteFlag=1
 	fi
+
+	if [ "$MODEL_NUM" = "TG4482A" ];then
+		for i in 1 2 3 4 5 6 7 8 9
+		do
+			psmcli set dmsb.l2net."$i".Members.Link ""
+			greIf=`psmcli get dmsb.l2net."$i".Members.Gre`
+			if [ x"$greIf" != "x" ];then
+				psmcli set dmsb.l2net."$i".Members.Gre `echo $greIf | cut -d "-" -f1`
+			fi
+		done
+		if [ "$BRIDGE_MODE" -gt 0 ];then
+			psmcli set dmsb.l2net.1.Members.Eth "llan0 lbr0 nrgmii2 nsgmii0"
+		else
+			psmcli set dmsb.l2net.1.Members.Eth "lbr0 nrgmii2 nsgmii0"
+		fi
+ 		psmcli set dmsb.l2net.2.Members.Moca ""
+		psmcli set dmsb.l2net.3.Members.Moca ""
+		psmcli set dmsb.l2net.4.Members.Moca ""
+		psmcli set dmsb.l2net.1.Port.9.LinkName "llan0"
+		psmcli set dmsb.l2net.2.Members.WiFi "wlan0.1"
+		psmcli set dmsb.l2net.3.Members.Gre ""
+		psmcli set dmsb.l2net.5.Members.WiFi ""
+
+		migrationCompleteFlag=1
+	fi
 	if [ "$migrationCompleteFlag" -eq 1 ];then
 		syscfg set psm_migration "completed"
                 syscfg commit
@@ -100,7 +125,7 @@ fi
 #if device is FR in other builds which is not having bridgeUtil or OVS support, device will have wrong psm config. 
 #need to correct psm config 
 if [ "$migrationCompleteFlag" -eq 0 ];then
-	if [ "$MODEL_NUM" = "CGM4140COM" ] || [ "$MODEL_NUM" = "TG3482G" ] || [ "$MODEL_NUM" = "CGM4981COM" ] || [ "$MODEL_NUM" = "CGM4331COM" ];then
+	if [ "$MODEL_NUM" = "CGM4140COM" ] || [ "$MODEL_NUM" = "TG3482G" ] || [ "$MODEL_NUM" = "CGM4981COM" ] || [ "$MODEL_NUM" = "CGM4331COM" ] || [ "$MODEL_NUM" = "TG4482A" ];then
 		for i in 1 2
 		do
 			if [ "xl2sd0-t" = "x`psmcli get dmsb.l2net."$i".Members.Link`" ];then

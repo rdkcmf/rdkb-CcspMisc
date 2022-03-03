@@ -84,6 +84,31 @@ static char *g_Subsystem = "eRT." ;
 
 static char *hotspot_enable = "dmsb.hotspot.enable" ;
 
+#define InterfaceMap_TOTAL (sizeof(InterfaceMap)/sizeof(InterfaceMap[0]))
+
+typedef struct InterfaceMap_s 
+{
+    char   *iface;
+    int    inst;
+} InterfaceMap_t;
+static InterfaceMap_t InterfaceMap[] = 
+{
+	{"wlan0.3", LOST_N_FOUND},
+	{"wlan0.5", LOST_N_FOUND},
+	{"wlan2.3", LOST_N_FOUND},
+	{"wlan2.5", LOST_N_FOUND},
+	{"wlan0.0", PRIVATE_LAN},
+	{"wlan2.0", PRIVATE_LAN},
+	{"wlan0.1", HOME_SECURITY},
+	{"wlan2.1", HOME_SECURITY},
+	{"wlan0.6", MESH_WIFI_BACKHAUL_2G},
+	{"wlan2.6", MESH_WIFI_BACKHAUL_5G},
+	{"wlan0.2", HOTSPOT_2G},
+	{"wlan2.2", HOTSPOT_5G},
+	{"wlan0.4", HOTSPOT_SECURE_2G},
+	{"wlan2.4", HOTSPOT_SECURE_5G}
+};
+
 br_shm_mutex brmutex;
 
 /*********************************************************************************************
@@ -109,25 +134,23 @@ br_shm_mutex br_shm_mutex_init(char *mutexName) {
 	errno = 0;
 	br_shm_mutex bridgeMutex;
 	memset(&bridgeMutex,0,sizeof bridgeMutex);
-	strncpy(bridgeMutex.br_mutex, mutexName,sizeof(bridgeMutex.br_mutex));
-	
+	strncpy(bridgeMutex.br_mutex, mutexName,sizeof(bridgeMutex.br_mutex));	
 	bridgeMutex.br_shm_fd= shm_open(mutexName, O_RDWR, 0660);
-	 if (errno == ENOENT) 
-	 {
-	     	bridge_util_log("shm open in create mode\n");
-		    bridgeMutex.br_shm_fd = shm_open(mutexName, O_RDWR|O_CREAT, 0660);
-		    bridgeMutex.br_shm_create = 1;
-	 }
-	 if (bridgeMutex.br_shm_fd == -1) 
-	 {
-		    bridge_util_log("shm_open call failed\n");
-		    return bridgeMutex;
-	 }
-	  
-	 if (ftruncate(bridgeMutex.br_shm_fd, sizeof(pthread_mutex_t)) != 0) {
-		    bridge_util_log("ftruncate call failed\n");
-		    return bridgeMutex;
-	 }
+	if (errno == ENOENT) 
+	{
+		bridge_util_log("shm open in create mode\n");
+		bridgeMutex.br_shm_fd = shm_open(mutexName, O_RDWR|O_CREAT, 0660);
+		bridgeMutex.br_shm_create = 1;
+	}
+	if (bridgeMutex.br_shm_fd == -1) 
+	{
+		bridge_util_log("shm_open call failed\n");
+		return bridgeMutex;
+	}
+	if (ftruncate(bridgeMutex.br_shm_fd, sizeof(pthread_mutex_t)) != 0) {
+		bridge_util_log("ftruncate call failed\n");
+		return bridgeMutex;
+	}
 	  // Using mmap to map the pthread mutex into the shared memory.
 	 void *address = mmap(
 		    NULL,
@@ -137,47 +160,42 @@ br_shm_mutex br_shm_mutex_init(char *mutexName) {
 		    bridgeMutex.br_shm_fd,
 		    0
 	  );
-	  if (address == MAP_FAILED) 
-	  {
-		    bridge_util_log("mmap failed\n");
-		    return bridgeMutex;
-	  }
-
-	  bridgeMutex.ptr  = (pthread_mutex_t *)address;
-	  if (bridgeMutex.br_shm_create) 
-	  {
-			pthread_mutexattr_t attr;
-     	    		if (pthread_mutexattr_init(&attr)) 
-			{
-					bridge_util_log("pthread_mutexattr_init failed\n");
-		    		return bridgeMutex;
-			}
-			int error = pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
-			if (error) 
-			{
-					bridge_util_log("pthread_mutexattr_setpshared error %d: %s\n",error,strerror(error));
-			      	return bridgeMutex;
-			}
-			
-			error = pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
-			if (error) 
-			{
-				 	bridge_util_log("pthread_mutexattr_setprotocol error %d: %s\n", error , strerror(error));
-			}
-     	
-     			error = pthread_mutexattr_setrobust_np(&attr, PTHREAD_MUTEX_ROBUST_NP);
-	   		if (error) 
-			{
-					bridge_util_log("pthread_mutexattr_setrobust_np error %d: %s\n" ,error,strerror(error));
-	    		}
-		
-			if (pthread_mutex_init(bridgeMutex.ptr, &attr)) 
-			{
-				bridge_util_log("pthread_mutex_init failed\n");
-				return bridgeMutex;
-			}
-	   }
-		
+	if (address == MAP_FAILED)
+	{
+		bridge_util_log("mmap failed\n");
+		return bridgeMutex;
+	}
+	bridgeMutex.ptr  = (pthread_mutex_t *)address;
+	if (bridgeMutex.br_shm_create) 
+	{
+		pthread_mutexattr_t attr;
+		if (pthread_mutexattr_init(&attr)) 
+		{
+			bridge_util_log("pthread_mutexattr_init failed\n");
+			return bridgeMutex;
+		}
+		int error = pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+		if (error) 
+		{
+			bridge_util_log("pthread_mutexattr_setpshared error %d: %s\n",error,strerror(error));
+			return bridgeMutex;
+		}		
+		error = pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
+		if (error) 
+		{
+			bridge_util_log("pthread_mutexattr_setprotocol error %d: %s\n", error , strerror(error));
+		}	
+		error = pthread_mutexattr_setrobust_np(&attr, PTHREAD_MUTEX_ROBUST_NP);
+		if (error) 
+		{
+			bridge_util_log("pthread_mutexattr_setrobust_np error %d: %s\n" ,error,strerror(error));
+		}	
+		if (pthread_mutex_init(bridgeMutex.ptr, &attr)) 
+		{
+			bridge_util_log("pthread_mutex_init failed\n");
+			return bridgeMutex;
+		}
+	}
 	return bridgeMutex;
 }
 
@@ -200,38 +218,35 @@ br_shm_mutex br_shm_mutex_init(char *mutexName) {
 
 int br_shm_mutex_close(br_shm_mutex brmutex) 
 {
-	  if (munmap((void *)brmutex.ptr, sizeof(pthread_mutex_t))) 
-	  {
+	if (munmap((void *)brmutex.ptr, sizeof(pthread_mutex_t))) 
+	{
 		bridge_util_log("munmap failed\n");
-	 	return -1;
-	  }
-	  brmutex.ptr = NULL;
-	  if (close(brmutex.br_shm_fd)) 
-	  {
-     		bridge_util_log("closing file handler");
-	    	return -1;
-	  }
-	  brmutex.br_shm_fd = 0;
-  return 0;
+		return -1;
+	}
+	brmutex.ptr = NULL;
+	if (close(brmutex.br_shm_fd)) 
+	{
+		bridge_util_log("closing file handler");
+		return -1;
+	}
+	brmutex.br_shm_fd = 0;
+return 0;
 }
-
 
 // Function to check if interface is created
 int checkIfExists(char* iface_name)
 {
-    struct ifreq ifr;
-    int fd;
-    
-    fd = socket(AF_INET, SOCK_DGRAM, 0);
-
-    strcpy(ifr.ifr_name, iface_name);
-    if (ioctl(fd, SIOCGIFFLAGS, &ifr) < 0) {
-        if (errno == ENODEV) {
-            bridge_util_log("%s Interface doesn't exists \n",iface_name);
-            close(fd);
-            return INTERFACE_NOT_EXIST;
-        }
-    }
+	struct ifreq ifr;
+	int fd;
+	fd = socket(AF_INET, SOCK_DGRAM, 0);
+	strcpy(ifr.ifr_name, iface_name);
+	if (ioctl(fd, SIOCGIFFLAGS, &ifr) < 0) {
+		if (errno == ENODEV) {
+			bridge_util_log("%s Interface doesn't exists \n",iface_name);
+			close(fd);
+			return INTERFACE_NOT_EXIST;
+		}
+}
 
     close(fd);
     return INTERFACE_EXIST;
@@ -280,13 +295,13 @@ int checkIfExistsInBridge(char* iface_name, char *bridge_name)
 
 void removeIfaceFromList(char *IfList, const char *ifname) 
 {
-    size_t len = strlen(ifname);
-    if (len > 0) {
-        char *token = IfList;
-        while ((token = strstr(token, ifname)) != NULL) {
-            memmove(token, token + len, strlen(token + len) + 1);
-        }
-    }
+	size_t len = strlen(ifname);
+	if (len > 0) {
+		char *token = IfList;
+		while ((token = strstr(token, ifname)) != NULL) {
+			memmove(token, token + len, strlen(token + len) + 1);
+		}
+	}
 }
 
 /*********************************************************************************************
@@ -1403,12 +1418,16 @@ int CreateBrInterface()
 
     	if ( bridgeInfo->GreIfList[0] != '\0')
     	{
-    		if ( 0 ==  wait_for_gre_ready(bridgeInfo->GreIfList) )
+			if( 1== getXfinityEnableStatus() )
+			{
+				if ( 0 ==  wait_for_gre_ready(bridgeInfo->GreIfList) )
     		{
                 	bridgeCreated = 1 ;
     			updateBridgeInfo(bridgeInfo,"",OVS_IF_UP_CMD,IF_GRE_BRIDGEUTIL); 				
 
-		}    				
+		     }    	
+			}
+    					
     	}
 
     	if ( bridgeInfo->ethIfList[0] != '\0')
@@ -1645,6 +1664,7 @@ void removePgdInterfacesFromCurrentIfList(char *current_if_list)
 
 void removeIfaceFromBridge(bridgeDetails *bridgeInfo,char *current_if_list) 
 {
+	bridge_util_log("Entering function removeIfaceFromBridge\n");
 	char* token_curlist = NULL ;
 	char* token_newlist = NULL;
 	char* rest_curlist = NULL ;
@@ -1783,13 +1803,16 @@ IF_REMOVE:
 			//  set parameter to gw_lan_refresh both switch and wifi
 			need_wifi_gw_refresh = 1;
 			need_switch_gw_refresh = 1 ;
+			bridge_util_log("In  function removeIfaceFromBridge removing  %s\n", token_curlist);
 			updateBridgeInfo(bridgeInfo,token_curlist,OVS_BR_REMOVE_CMD,IF_OTHER_BRIDGEUTIL); 				
   	
 				
 		}
 
 
-	} 
+	}
+	bridge_util_log("Leaving function removeIfaceFromBridge\n");
+
 }
 
 
@@ -1865,7 +1888,7 @@ void addIfaceToBridge(bridgeDetails *bridgeInfo,char *current_if_list)
 		
     	}
 
-	if ( bridgeInfo->GreIfList[0] != '\0' )
+	if (( bridgeInfo->GreIfList[0] != '\0' ) && ( 1 == getXfinityEnableStatus()))
     	{
     		if ( 0 ==  wait_for_gre_ready(bridgeInfo->GreIfList) )
     		{
@@ -2433,7 +2456,18 @@ void getSettings()
         	skipMoCA = 1 ;
         }
 }
-
+int HandleWifiInterface(char *Cmd_Opr)
+{
+	unsigned int m;
+	for(m=0; m< InterfaceMap_TOTAL; m++ )
+	{
+		if( strstr(  Cmd_Opr , InterfaceMap[m].iface) )
+		{
+			return InterfaceMap[m].inst;
+		}
+	}
+	return -1;
+}
 
 int main(int argc, char *argv[])
 {
@@ -2596,11 +2630,22 @@ int main(int argc, char *argv[])
     {
         AddOrDeletePort(argv[2],argv[3],OVS_BR_REMOVE_CMD);
     }
-	else
-	{
-		bridge_util_log("%s is invalid operation\n",Cmd_Opr);
-
-	}
+    else if ( (strstr(Cmd_Opr,"if_wlan") != 0 ) ) 
+    {
+        int instance = -1;
+        instance = HandleWifiInterface(Cmd_Opr);
+        if( -1 != instance )
+        {
+            bridge_util_log(" In wlan instance %d \n", instance );
+            BridgeOprInPropgress = CREATE_BRIDGE;
+            InstanceNumber = instance;
+            CreateBrInterface();
+        }
+    }
+    else
+    {
+        bridge_util_log("%s is invalid operation\n",Cmd_Opr);
+    }
 
 EXIT:
 	ExitFunc();

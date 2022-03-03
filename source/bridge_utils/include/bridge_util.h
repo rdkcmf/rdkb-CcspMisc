@@ -90,7 +90,8 @@ int updateIfaceInfo(bridgeDetails *bridgeInfo, char* ifNameToBeUpdated, int Opr 
 int CreateBrInterface();
 int DeleteBrInterface();
 void AddOrDeletePort(char* bridge_name, char* iface_name,int operation);
-
+void add_to_group(char* bridge_name,char* iface_name);
+void remove_from_group(char* bridge_name,char* iface_name);
 br_shm_mutex br_shm_mutex_init(char *name);
 
 int br_shm_mutex_close(br_shm_mutex mutex);
