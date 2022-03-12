@@ -16,12 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-AM_CFLAGS = -D_ANSC_LINUX
-AM_CFLAGS += -D_ANSC_USER
-AM_CFLAGS += -D_ANSC_LITTLE_ENDIAN_
-AM_CFLAGS += -D_CCSP_CWMP_TCP_CONNREQ_HANDLER
-AM_CFLAGS += -D_ANSC_IPV6_COMPATIBLE_
-AM_CFLAGS += -DBUILD_WEB
+AM_CFLAGS =
 
 AM_CPPFLAGS = -Wall -Werror
 

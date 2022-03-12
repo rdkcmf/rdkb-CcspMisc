@@ -18,16 +18,16 @@
 ##########################################################################
 
 AM_CFLAGS = -D_GNU_SOURCE
-AM_CFLAGS += -fno-exceptions -Os -Wall -Wextra
+AM_CFLAGS += -Wall -Wextra
 
 bin_PROGRAMS = bridgeUtils
 
 bridgeUtils_CPPFLAGS = -I$(top_srcdir)/include \
-						-I$(top_srcdir)/source/include \
-						-I$(top_srcdir)/source/bridge_utils/include \
-						-I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/ccsp \
-						-I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/ovsagent \
-						$(DBUS_CFLAGS)
+                       -I$(top_srcdir)/source/include \
+                       -I$(top_srcdir)/source/bridge_utils/include \
+                       -I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/ccsp \
+                       -I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/ovsagent \
+                       $(DBUS_CFLAGS)
 
 bridgeUtils_SOURCES = bridge_util.c bridge_creation.c main.c bridge_util_generic.c
 
