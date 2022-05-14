@@ -69,6 +69,7 @@ static char *l2netWiFiMembers = "dmsb.l2net.%d.Members.OneWiFi";
 static char *l2netWiFiMembers = "dmsb.l2net.%d.Members.WiFi";
 #endif
 static char *l2netLinkMembers = "dmsb.l2net.%d.Members.Link";
+static char *l2netVirualParentIfname = "dmsb.l2net.%d.Members.VirtualParentIfname";
 
 static char *l2netEthWanInterface = "dmsb.l2net.EthWanInterface";
 static char *mocaIsolation = "dmsb.l2net.HomeNetworkIsolation";
@@ -650,6 +651,23 @@ int getIfList(bridgeDetails *bridgeInfo)
     		bridge_util_log("%s: psm call failed for %s, ret code %d\n", __func__, paramName, retPsmGet);
 
     }
+
+    memset(paramName,0,sizeof(paramName)); 
+    snprintf(paramName,sizeof(paramName), l2netVirualParentIfname, InstanceNumber);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, paramName, NULL, &paramValue);
+    if (retPsmGet == CCSP_SUCCESS) 
+    {
+	        bridge_util_log("%s: %s returned %s\n", __func__, paramName, paramValue);
+	        
+	        strncpy(bridgeInfo->VirtualParentIfname,paramValue,sizeof(bridgeInfo->vlan_name)-1);
+			if(bus_handle != NULL)
+			{
+	        	((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(paramValue);
+	        	paramValue = NULL;
+			}
+
+    }
+
     memset(paramName,0,sizeof(paramName)); 
 
     snprintf(paramName,sizeof(paramName), l2netEthMembers, InstanceNumber);
@@ -1370,16 +1388,22 @@ OVSACTION:
 
 				if ( ( if_type == OVS_GRE_IF_TYPE ) || ( if_type == OVS_VLAN_IF_TYPE )  )
 				{
-					strncpy(pGwConfig->parent_ifname,token,sizeof(pGwConfig->parent_ifname)-1);
 	    				pGwConfig->vlan_id = vlanId ;
-		                        snprintf(tmp_buff,sizeof(tmp_buff),"%s.%d",pGwConfig->parent_ifname,pGwConfig->vlan_id);
-                		        strncpy(pGwConfig->if_name,tmp_buff,sizeof(pGwConfig->if_name)-1);
-
+					if ( bridgeInfo->VirtualParentIfname[0] != '\0' )
+					{
+						strncpy(pGwConfig->parent_ifname,bridgeInfo->VirtualParentIfname,sizeof(pGwConfig->parent_ifname)-1);
+						strncpy(pGwConfig->if_name,token,sizeof(pGwConfig->if_name)-1);
+					}
+					else
+					{
+						strncpy(pGwConfig->parent_ifname,token,sizeof(pGwConfig->parent_ifname)-1);
+		                		snprintf(tmp_buff,sizeof(tmp_buff),"%s.%d",pGwConfig->parent_ifname,pGwConfig->vlan_id);
+                				strncpy(pGwConfig->if_name,tmp_buff,sizeof(pGwConfig->if_name)-1);	
+					}			
 				}
 				else
 				{
 					strncpy(pGwConfig->if_name,token,sizeof(pGwConfig->if_name)-1);
-
 				}
 				
 				ovs_request.table_config.config = (void *) pGwConfig;
@@ -1388,20 +1412,16 @@ OVSACTION:
 				bridge_util_log("%s : parent_ifname is %s : if_name is %s : bridge %s : vlan id is %d , if_type is %d: \n", __FUNCTION__,pGwConfig->parent_ifname,pGwConfig->if_name,pGwConfig->parent_bridge,pGwConfig->vlan_id,pGwConfig->if_type); 
 							
 				retValue = create_bridge_api(&ovs_request,NULL);
-
 				if ( retValue != true )
 				{
 					bridge_util_log("create_bridge_api call failed\n");
-
                    			 if ( retryCounter == 0 )
                     			{
                         			retryCounter++;
                         			bridge_util_log("retrying last call\n");
                         			goto OVSACTION;
                     			}
-
 				}
-
 		} 
     return 0;
 }
@@ -1453,13 +1473,12 @@ int CreateBrInterface()
 	snprintf(event_name,sizeof(event_name),"multinet_%d-vid",InstanceNumber);
 	snprintf(val,sizeof(val),"%d",bridgeInfo->vlanID);
 	sysevent_set(syseventfd_vlan, sysevent_token_vlan, event_name, val, 0);
-				
+	
 	if ( bridgeInfo->vlan_name[0] != '\0' )
-    	{
-        	bridgeCreated = 1 ;
-		updateBridgeInfo(bridgeInfo,"",OVS_IF_UP_CMD,IF_VLAN_BRIDGEUTIL); 				
-  				
-    	}
+    {
+        bridgeCreated = 1 ;
+		updateBridgeInfo(bridgeInfo,"",OVS_IF_UP_CMD,IF_VLAN_BRIDGEUTIL);			
+    }
 
     	if ( bridgeInfo->GreIfList[0] != '\0')
     	{
