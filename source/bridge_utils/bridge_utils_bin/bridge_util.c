@@ -63,7 +63,11 @@ static char *l2netVlanID = "dmsb.l2net.%d.Vid";
 static char *l2netEthMembers = "dmsb.l2net.%d.Members.Eth";
 static char *l2netMocaMembers = "dmsb.l2net.%d.Members.Moca";
 static char *l2netGreMembers = "dmsb.l2net.%d.Members.Gre";
+#ifdef RDK_ONEWIFI
+static char *l2netWiFiMembers = "dmsb.l2net.%d.Members.OneWiFi";
+#else
 static char *l2netWiFiMembers = "dmsb.l2net.%d.Members.WiFi";
+#endif
 static char *l2netLinkMembers = "dmsb.l2net.%d.Members.Link";
 
 static char *l2netEthWanInterface = "dmsb.l2net.EthWanInterface";
