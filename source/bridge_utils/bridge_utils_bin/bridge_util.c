@@ -36,6 +36,9 @@ static cap_user   appcaps;
 int InstanceNumber = 0; 
 int DeviceMode = 0, ovsEnable = 0 , bridgeUtilEnable = 0 , skipWiFi=0 , skipMoCA = 0 , ethWanEnabled =0 , PORT2ENABLE = 0, eb_enable = 0; // router = 0, bridge = 2
 int wan_mode = 0;
+#ifdef RDKB_EXTENDER_ENABLED
+int DeviceNetworkingMode = DEVICE_NETWORKINGMODE_ROUTER; // 0 is router, 1 is extender.
+#endif
 char Cmd_Opr[32] = {0};
 char primaryBridgeName[64] = {0} , ethWanIfaceName[64] ={0} ;
 // It confirms whether the opeartion is to create the bridge or to remove the bridge
@@ -1046,7 +1049,18 @@ int HandlePostConfigGeneric(bridgeDetails *bridgeInfo,int InstanceNumber)
 			case LOST_N_FOUND:
 					if ( BridgeOprInPropgress == CREATE_BRIDGE )
 					{
-                            			assignIpToBridge(bridgeInfo->bridgeName,LnFL3Net);
+                        bool isIpNeedToAssign = true;
+#ifdef RDKB_EXTENDER_ENABLED
+                        if (DeviceNetworkingMode == DEVICE_NETWORKINGMODE_EXTENDER)
+                        {
+                            isIpNeedToAssign = false;
+                        }
+#endif                        
+
+                        if (isIpNeedToAssign == true)
+                        {
+                            assignIpToBridge(bridgeInfo->bridgeName,LnFL3Net);
+                        }
 					}
 					break;
 
@@ -2253,7 +2267,17 @@ void getSettings()
 
         }
 
+#ifdef RDKB_EXTENDER_ENABLED
+        if( 0 == syscfg_get( NULL, "Device_Mode", buf, sizeof( buf ) ) )
+        {
+            DeviceNetworkingMode = atoi(buf);
+        }
+        else
+        {
+            bridge_util_log("syscfg_get failed to retrieve  device networking mode\n");
 
+        }
+#endif
         if( 0 == syscfg_get( NULL, "bridge_mode", buf, sizeof( buf ) ) )
         {
         	DeviceMode = atoi(buf);

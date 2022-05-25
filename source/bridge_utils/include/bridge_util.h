@@ -58,6 +58,14 @@
 
 #define BR_SHM_MUTEX "BridgeUtilMutex"
 
+#ifdef RDKB_EXTENDER_ENABLED
+typedef enum DeviceNetworkMode
+{
+    DEVICE_NETWORKINGMODE_ROUTER = 0,
+    DEVICE_NETWORKINGMODE_EXTENDER
+}DeviceNetworkMode;
+#endif
+
 typedef struct br_shm_mutex {
   pthread_mutex_t *ptr; 
   int br_shm_create;        
