@@ -180,17 +180,14 @@ static int udhcpc_get_other_args (char * buff, dhcp_params * params)
         strcat (buff, pidfile);
     }
 
-    if (params->ifType == WAN_LOCAL_IFACE)
-    {
-        // Add -s <servicefile>
-        char servicefile[BUFLEN_32] = {0};
+    // Add -s <servicefile>
+    char servicefile[BUFLEN_32] = {0};
 #ifdef UDHCPC_SCRIPT_FILE
-        snprintf (servicefile, sizeof(servicefile), "-s %s ", UDHCPC_SERVICE_SCRIPT_FILE);
+    snprintf (servicefile, sizeof(servicefile), "-s %s ", UDHCPC_SERVICE_SCRIPT_FILE);
 #else
-        snprintf (servicefile, sizeof(servicefile), "-s %s ", UDHCPC_SERVICE_EXE);
+    snprintf (servicefile, sizeof(servicefile), "-s %s ", UDHCPC_SERVICE_EXE);
 #endif
-        strcat (buff, servicefile);
-    }
+    strcat (buff, servicefile);
 
     // Add udhcpc process behavior
 #ifdef UDHCPC_RUN_IN_FOREGROUND

@@ -135,7 +135,7 @@ pid_t start_dhcpv4_client (dhcp_params * params)
     dhcp_opt_list * send_opt_list = NULL;
 
     DBG_PRINT("%s %d: Collecting DHCP GET/SEND Request\n", __FUNCTION__, __LINE__);
-    if ((params->ifType == WAN_LOCAL_IFACE) && (get_dhcpv4_opt_list(&req_opt_list, &send_opt_list) == FAILURE))
+    if (get_dhcpv4_opt_list(&req_opt_list, &send_opt_list) == FAILURE)
     {
         DBG_PRINT("%s %d: failed to get option list from platform hal\n", __FUNCTION__, __LINE__);
         return pid;
@@ -144,7 +144,17 @@ pid_t start_dhcpv4_client (dhcp_params * params)
     // building args and starting dhcpv4 client
     DBG_PRINT("%s %d: Starting DHCP Clients\n", __FUNCTION__, __LINE__);
 #ifdef DHCPV4_CLIENT_UDHCPC
+    if (params->ifType == WAN_LOCAL_IFACE)
+    {
     pid =  start_udhcpc (params, req_opt_list, send_opt_list);
+    }
+    else
+    {
+        // for REMOTE_IFACE,
+        //  DHCP request options are needed
+        //  DHCP send options are not necessary
+        pid =  start_udhcpc (params, req_opt_list, NULL);
+    }
 #elif DHCPV4_CLIEN_TI_UDHCPC
     pid =  start_ti_udhcpc (params);
 #endif
