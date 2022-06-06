@@ -246,7 +246,22 @@ static int dibbler_client_prepare_config (dibbler_client_info * client_info)
                         }
                         else if (opt_list->dhcp_opt == DHCPV6_OPT_15)
                         {
-                            snprintf (args, BUFLEN_128, "\n\toption 00%d string \"%s\"\n", opt_list->dhcp_opt, opt_list->dhcp_opt_val);
+                            char str[32]={0};
+                            char option15[100]={0};
+                            char temp[16]={0};
+
+                            strncpy(str,opt_list->dhcp_opt_val,strlen(opt_list->dhcp_opt_val)+1);
+
+                            snprintf(temp, 8, "0x%04X",(int)strlen(str)+1);
+                            strncat(option15,temp,8);
+
+                            for(int i=0; i<(int)strlen(str)+1; i++)
+                            {
+                                snprintf(temp, 3, "%02X",str[i]);
+                                strncat(option15,temp,3);
+                            }
+
+                            snprintf (args, BUFLEN_128, "\n\toption 00%d hex %s\n", opt_list->dhcp_opt,option15 );
                             fputs(args, fout);
                         }
                         else if (opt_list->dhcp_opt == DHCPV6_OPT_20)
