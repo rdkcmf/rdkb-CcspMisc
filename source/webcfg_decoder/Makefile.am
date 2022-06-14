@@ -21,6 +21,6 @@ bin_PROGRAMS = webcfg_decoder
 
 webcfg_decoder_SOURCES = main.c
 
-webcfg_decoder_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/source/include -I$(top_srcdir)/source/util/utils 
+webcfg_decoder_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/source/include -I$(top_srcdir)/source/util/utils -I${PKG_CONFIG_SYSROOT_DIR}$(includedir)/rbus
 
-webcfg_decoder_LDFLAGS = -lssl -ltrower-base64 -lmsgpackc -lz -lpthread
+webcfg_decoder_LDFLAGS = -lssl -ltrower-base64 -lmsgpackc -lz -lpthread -lcurl -lrbus -lm
