@@ -32,6 +32,7 @@
 #include "syscfg/syscfg.h"
 #include <sys/stat.h>
 #include "platform_hal.h"
+#include "rdk_debug.h"
 
 #define TRUE_STR               "true"
 #define TRUE                   1
@@ -53,22 +54,14 @@
 #define BUFLEN_264             264         //!< buffer length 264
 #define BUFLEN_512             512         //!< buffer length 512
 #define BUFLEN_1024            1024        //!< buffer length 1024
-#define CONSOLE_LOG_FILE       "/rdklogs/logs/WANMANAGERLog.txt.0"
 #define COLLECT_WAIT_INTERVAL_MS          4
 #define USECS_IN_MSEC                     1000
 #define MSECS_IN_SEC                      1000
 #define RETURN_PID_TIMEOUT_IN_MSEC        (5 * MSECS_IN_SEC)    // 5 sec
 #define RETURN_PID_INTERVAL_IN_MSEC       (0.5 * MSECS_IN_SEC)  // 0.5 sec - half a second
 
-#define DBG_PRINT(fmt ...)     {\
-    FILE     *fp        = NULL;\
-    fp = fopen ( CONSOLE_LOG_FILE, "a+");\
-    if (fp)\
-    {\
-        fprintf(fp,fmt);\
-        fclose(fp);\
-    }\
-}\
+#define DBG_PRINT(fmt, arg...) \
+        RDK_LOG(RDK_LOG_INFO, "LOG.RDK.WANMANAGER", fmt, ##arg);
 
 #define UNUSED_VARIABLE(x) (void)(x)
 
