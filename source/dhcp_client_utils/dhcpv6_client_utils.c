@@ -24,6 +24,7 @@
 
 #define LOCALHOST         "127.0.0.1"
 #define DHCP_SYSEVENT_NAME "dhcp_evt_handler"
+#define DHCPV6C_ENABLED    "dhcpv6c_enabled"
 
 token_t dhcp_sysevent_token;
 int dhcp_sysevent_fd;
@@ -125,6 +126,9 @@ pid_t start_dhcpv6_client (dhcp_params * params)
     DBG_PRINT("%s %d: Starting Dibbler Clients\n", __FUNCTION__, __LINE__);
     pid =  start_dibbler (params, req_opt_list, send_opt_list);
 
+    /* set dhcpv6c_enabled sysevent to restart dibbler-server in Selfheal process */
+    sysevent_set(dhcp_sysevent_fd, dhcp_sysevent_token, DHCPV6C_ENABLED, "1", 0);
+
     //exit part
     DBG_PRINT("%s %d: freeing all allocated resources\n", __FUNCTION__, __LINE__);
     free_opt_list_data (req_opt_list);
@@ -144,11 +148,22 @@ pid_t start_dhcpv6_client (dhcp_params * params)
  */
 int stop_dhcpv6_client (dhcp_params * params)
 {
+    char * sysevent_name = DHCP_SYSEVENT_NAME;
+
     if (params == NULL)
     {
         DBG_PRINT("%s %d: Invalid args..\n", __FUNCTION__, __LINE__);
         return 0;
     }
+
+    dhcp_sysevent_fd =  sysevent_open(LOCALHOST, SE_SERVER_WELL_KNOWN_PORT, SE_VERSION, sysevent_name, &dhcp_sysevent_token);
+    if (dhcp_sysevent_fd < 0)
+    {
+        DBG_PRINT("%s %d: Fail to open sysevent.\n", __FUNCTION__, __LINE__);
+    }
+
+    sysevent_set(dhcp_sysevent_fd, dhcp_sysevent_token, DHCPV6C_ENABLED, "0", 0);
+    sysevent_close(dhcp_sysevent_fd, dhcp_sysevent_token);
 
     return stop_dibbler (params);
 
