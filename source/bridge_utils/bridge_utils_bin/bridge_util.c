@@ -1240,15 +1240,16 @@ int updateBridgeInfo(bridgeDetails *bridgeInfo, char* ifNameToBeUpdated, int Opr
 {
 
 	char IfList_Copy[IFLIST_SIZE] = {0} ;
-    char tmp_buff[32] = {0} ;
+    	char tmp_buff[32] = {0} ;
 
-	int if_type = 0 , vlanId = -1 ;
+	int if_type = OVS_OTHER_IF_TYPE , vlanId = -1 ;
 	ovs_interact_request ovs_request = {0};
-    Gateway_Config *pGwConfig = NULL;
+    	Gateway_Config *pGwConfig = NULL;
 	bool retValue = false ;
-    char* token = NULL; 
-    char* rest = NULL; 
-
+    	char* token = NULL; 
+    	char* rest = NULL; 
+    	bool bridgeCreated = false;
+    	bool interfaceExist=true;
 	ovs_request.block_mode = OVS_ENABLE_BLOCK_MODE ;
 
 	ovs_request.table_config.table.id = OVS_GW_CONFIG_TABLE;
@@ -1342,8 +1343,22 @@ int updateBridgeInfo(bridgeDetails *bridgeInfo, char* ifNameToBeUpdated, int Opr
 
 		while ((token = strtok_r(rest, " ", &rest))) 
 		{
-            		retryCounter = 0;
-
+			    interfaceExist=true;
+            	retryCounter = 0;
+            		/* 
+            		Checking if VAP/wifi interface is created before attaching to bridge in OneWifi enabled build.
+            		Either BCM driver/Onewifi will attach the vaps once it is created. 
+			*/
+			
+			#ifdef RDK_ONEWIFI
+            		// OVSAgent considers WiFi interfaces as OVS_OTHER_IF_TYPE 
+       			if ( OVS_OTHER_IF_TYPE == if_type && INTERFACE_NOT_EXIST == checkIfExists(token))
+       			{
+       				interfaceExist=false;
+       				if(bridgeCreated)
+       					continue;
+       			} 
+			#endif
             		if ( (ethWanEnabled) && ((if_type == OVS_ETH_IF_TYPE) || (if_type == OVS_VLAN_IF_TYPE) ) && ( strncmp(ethWanIfaceName,token,sizeof(ethWanIfaceName)-1) == 0 ))
                 		continue;
 OVSACTION:
@@ -1404,7 +1419,9 @@ OVSACTION:
 				}
 				else
 				{
-					strncpy(pGwConfig->if_name,token,sizeof(pGwConfig->if_name)-1);
+					//if interface doesn't exist creating only bridge interface
+					if(interfaceExist)
+						strncpy(pGwConfig->if_name,token,sizeof(pGwConfig->if_name)-1);
 				}
 				
 				ovs_request.table_config.config = (void *) pGwConfig;
@@ -1423,6 +1440,12 @@ OVSACTION:
                         			goto OVSACTION;
                     			}
 				}
+				else
+				{
+					if(!bridgeCreated)
+						bridgeCreated=true;	
+				}
+
 		} 
     return 0;
 }
