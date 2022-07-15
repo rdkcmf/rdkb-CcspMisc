@@ -27,6 +27,7 @@
 #ifdef INCLUDE_BREAKPAD
 #include "breakpad_wrapper.h"
 #endif
+#define ONEWIFI_ENABLED "/etc/onewifi_enabled"
 
 static char *component_id = "ccsp.bridgeUtils";
 static char *pCfg 	= CCSP_MSG_BUS_CFG;
@@ -2396,6 +2397,11 @@ void getSettings()
         {
         	bridge_util_log("syscfg_get failed to retrieve ovs_enable\n");
 
+        }
+        if( 0 == access( ONEWIFI_ENABLED, F_OK ) )
+        {
+            ovsEnable = 1;
+            bridge_util_log("setting ovsEnable to true for onewifi build\n");
         }
 
         memset(buf,0,sizeof(buf));
