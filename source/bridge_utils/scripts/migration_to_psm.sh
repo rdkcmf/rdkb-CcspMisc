@@ -20,6 +20,20 @@
 
 source /etc/utopia/service.d/log_capture_path.sh
 . /etc/device.properties
+
+counter=0
+
+while [ ! -f /tmp/psm_initialized ]
+do
+  if [ "$counter" -le 30 ]; then
+  	echo "`date`: Waiting for psm to be ready.."
+  	counter=$((counter+1))
+  	sleep 1
+  else
+  	break
+  fi
+done
+
 PORT2ENABLE=`syscfg get HomeSecurityEthernet4Flag`
 BRIDGE_MODE=`syscfg get bridge_mode`
 migrationCompleteFlag=0
