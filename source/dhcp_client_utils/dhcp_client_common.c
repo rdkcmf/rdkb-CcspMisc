@@ -180,7 +180,10 @@ int find_strstr (char * basestr, int basestr_len, char * substr, int substr_len)
             for (; ((j < substr_len) && (i < basestr_len)); j ++, i++)
             {
                 if (basestr[i] != substr[j])
-                    continue;
+                {
+                    j=0;
+                    break;
+                }
 
                 if (j == substr_len - 1)
                     return SUCCESS;
