@@ -128,6 +128,8 @@ if [ "xcompleted" != "x`syscfg get psm_migration`" ];then
 		psmcli set dmsb.l2net.2.Members.WiFi "wlan0.1"
 		psmcli set dmsb.l2net.3.Members.Gre ""
 		psmcli set dmsb.l2net.5.Members.WiFi ""
+		psmcli set dmsb.l2net.11.Members.Link "nrgmii2 nsgmii0 sw_2 sw_3"
+                psmcli set dmsb.MultiLAN.EthBhaul_l3net 8
 
 		migrationCompleteFlag=1
 	fi
@@ -147,4 +149,14 @@ if [ "$migrationCompleteFlag" -eq 0 ];then
 			fi
 		done
 	fi
+	if [ "$MODEL_NUM" = "TG4482A" ];then
+		if [ "x" = "x`psmcli get dmsb.l2net.11.Members.Link`" ];then
+			psmcli set dmsb.l2net.11.Members.Link "nrgmii2 nsgmii0 sw_2 sw_3"
+		fi
+                if [ "8" != "`psmcli get dmsb.MultiLAN.EthBhaul_l3net`" ];then
+                        psmcli set dmsb.MultiLAN.EthBhaul_l3net 8
+                fi
+	fi
 fi
+
+exit 0
