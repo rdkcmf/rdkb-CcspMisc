@@ -823,7 +823,7 @@ int processPacking(char *filename1, char *filename2, uint32_t version, char * su
 	char *fileData1 = NULL;
 	char *fileData2 = NULL;
     	size_t len1, len2 = 0;
-	void *packedData, *packedRootData = NULL;
+	void *packedData = NULL, *packedRootData = NULL;
 	//data1_t *packRootData = NULL;
 	data1_t *packBlobData = NULL;
 	size_t rootPackSize, blobPackSize = -1;
@@ -862,8 +862,21 @@ int processPacking(char *filename1, char *filename2, uint32_t version, char * su
 		else
 		{
 			printf("Failed in memory allocation\n");
-			free(fileData1);
-			free(fileData2);
+                        if(packBlobData)
+                        {
+                            free(packBlobData);
+                            packBlobData = NULL;
+                        }
+                        if(fileData1)
+                        {
+			    free(fileData1);
+                            fileData1 = NULL;
+                        }
+                        if(fileData2)
+                        {
+			    free(fileData2);
+                            fileData2 = NULL;
+                        }
 			return 0;
 		}
 
@@ -878,18 +891,39 @@ int processPacking(char *filename1, char *filename2, uint32_t version, char * su
 			{
 				fprintf(stderr,"%s File not Found\n", B64OUTFILE);
 				free(encodedData);
+                                encodedData = NULL;
+				/* CID :173130 Resource leak (RESOURCE_LEAK) */
+		                free(fileData1);
+                                fileData1 = NULL;
+                                
+                                free(fileData2);
+                                fileData2 = NULL;
+                                
+                                /* CID :173133 Resource leak (RESOURCE_LEAK) */
+			        free(packBlobData);
+                                packBlobData = NULL;
+
+                                free(packedData);
+                                packedData = NULL;
+
 				return 0;
 			}
 			free(encodedData);
+                        encodedData = NULL;
 			rootPackSize = webcfg_pack_rootdoc( (const char *)packedData, &packedRootData, blobPackSize);
 			printf("rootPackSize is %zu\n", rootPackSize);
 		}
 		else
 		{
 			printf("Failed in memory allocation\n");
+                        free(packBlobData);
+                        packBlobData = NULL;
 			free(fileData1);
+                        fileData1 = NULL;
 			free(fileData2);
+                        fileData2 = NULL;
 			free(packedData);
+                        packedData = NULL;
 			return 0;
 		}
 
@@ -900,13 +934,33 @@ int processPacking(char *filename1, char *filename2, uint32_t version, char * su
 			{
 				fprintf(stderr,"%s File not Found\n", OUTFILE);
 				free(packedRootData);
+                                packedRootData = NULL;
+				/* CID :173131 Resource leak (RESOURCE_LEAK) */
+		                free(fileData1);
+                                fileData1 = NULL;
+                          
+                                free(fileData2);
+                                fileData2 = NULL;   
+
+                                free(packedData);
+                                packedData = NULL;
+                                
+                                free(packBlobData);
+                                packBlobData = NULL;
 				return 0;
 			}
 			free(packedRootData);
+                        packedRootData = NULL;
 		}
 		free(fileData1);
+                fileData1 = NULL;
 		free(fileData2);
+                fileData2 = NULL;
 		free(packedData);
+                packedData = NULL;
+                free(packBlobData);
+                packBlobData = NULL;
+                
 	}
 	else
 	{

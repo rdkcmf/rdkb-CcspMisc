@@ -217,6 +217,12 @@ void msgPackDecoder()
 	}
 	else
 	{
+		/* CID :160753 Resource leak (RESOURCE_LEAK) */
+		if(data)
+                {
+		    free(data);
+                    data = NULL;
+		}
 		fprintf(stderr,"File not Found\n");
 	}
 
@@ -272,7 +278,13 @@ void b64Decoder()
 		free(data);
 	}
 	else
-	{
+	{      
+		/* CID :143621 Resource leak (RESOURCE_LEAK) */
+		if(data)
+                {
+		    free(data);
+                    data = NULL;
+		}
 		fprintf(stderr,"File not Found\n");
 	}
 }
@@ -394,6 +406,7 @@ void cli_createCurlHeader( struct curl_slist *list, struct curl_slist **header_l
 		list = curl_slist_append(list, auth_header);
 		free(auth_header);
 		free(authdata);
+                authdata = NULL;
 	}
 
 
@@ -408,6 +421,12 @@ void cli_createCurlHeader( struct curl_slist *list, struct curl_slist **header_l
 	list = curl_slist_append(list, "Accept: application/msgpack");
 
 	*header_list = list;
+	/* CID :280267 Resource leak (RESOURCE_LEAK) */
+	if(authdata)
+        {
+	    free(authdata);
+            authdata = NULL;
+	}
 }
 
 //&webConfigData, &res_Code, &transaction_uuid, ct, &dataSize, url, doclist, versionlist))
@@ -437,6 +456,8 @@ int cli_getHttpResponse(char **configData, long *code, char* contentType, size_t
 		if(NULL == data1.data)
 		{
 			printf("Failed to allocate memory.\n");
+			/* CID :280260 Resource leak (RESOURCE_LEAK) */
+			curl_easy_cleanup(curl);
 			return 1;
 		}
 		data1.data[0] = '\0';
@@ -461,6 +482,9 @@ int cli_getHttpResponse(char **configData, long *code, char* contentType, size_t
 			free(data1.data);
 			curl_slist_free_all(headers_list);
 			curl_easy_cleanup(curl);
+			/* CID :280252  Resource leak (RESOURCE_LEAK) */
+			free(webConfigURL);
+                        webConfigURL = NULL;
 			return 1;
 		}
 
@@ -958,9 +982,15 @@ int rbusFetch(char **args)
 	rbus_close(handle);
 
 	free(docname);
+        docname = NULL;
 
 	exit1:
-
+	/* CID :280254 Resource leak (RESOURCE_LEAK) */
+        if(docname)
+	{
+	    free(docname);
+            docname = NULL;
+	}
 	return rc;
 }
 

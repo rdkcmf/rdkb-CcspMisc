@@ -175,6 +175,17 @@ static int dibbler_client_prepare_config (dibbler_client_info * client_info)
     if (fin == NULL || fout == NULL)
     {
         DBG_PRINT("%s %d: failed to open files %s %s\n", __FUNCTION__, __LINE__, DIBBLER_TEMPLATE_CONFIG_FILE, DIBBLER_TMP_CONFIG_FILE);
+	/* CID :256901 Resource leak (RESOURCE_LEAK) */
+	if(fin)
+        {
+            fclose(fin);
+        }
+	/* CID :256903: Resource leak (RESOURCE_LEAK) */
+	if(fout)
+        {
+            fclose(fout);
+        }
+
         return FAILURE;
     }
 

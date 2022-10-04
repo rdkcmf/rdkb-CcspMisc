@@ -2275,8 +2275,13 @@ void drop_root()
 
 int Initialize()
 {
-	// Initializing bus communication 
-    	creat(BRIDGE_UTIL_RUNNING,S_IRUSR |S_IWUSR | S_IRGRP | S_IROTH);
+	// Initializing bus communication
+	/* CID :257718 Resource leak (RESOURCE_LEAK) */
+	int fd;
+    	if ((fd = creat(BRIDGE_UTIL_RUNNING,S_IRUSR |S_IWUSR | S_IRGRP | S_IROTH)) >= 0)
+	{
+	    close(fd);
+	}
 	int ret;
 	ret = CCSP_Message_Bus_Init(component_id, pCfg, &bus_handle,(CCSP_MESSAGE_BUS_MALLOC) Ansc_AllocateMemory_Callback, Ansc_FreeMemory_Callback);
 	if (ret == -1)
