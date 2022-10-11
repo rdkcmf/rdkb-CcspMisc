@@ -1027,7 +1027,8 @@ TEST_F(BridgeUtilsTestFixture, getCurrentIfListOvsEnable)
 {
     ovsEnable = 1;
     char bridge[] = "brlan0";
-    char ifList[216] = {0};
+    /* CID :249149 Out-of-bounds access (OVERRUN)*/
+    char ifList[TOTAL_IFLIST_SIZE] = {0};
     char expectedCmd[128] = {0} ;
     snprintf(expectedCmd,sizeof(expectedCmd),"ovs-vsctl list-ifaces %s | tr \"\n\" \" \" ",bridge);
     char expectedIfList[] = "ath0 ath1 lan0 lbr0 nmoca0 ";
@@ -1053,7 +1054,8 @@ TEST_F(BridgeUtilsTestFixture, getCurrentIfListBridgeUtilsEnable)
     ovsEnable = 0;
     bridgeUtilEnable = 1;
     char bridge[] = "brlan1";
-    char ifList[216] = {0};
+    /* CID :249138 Out-of-bounds access (OVERRUN) */
+    char ifList[TOTAL_IFLIST_SIZE] = {0};
     char expectedCmd[128] = {0} ;
     snprintf(expectedCmd,sizeof(expectedCmd),"brctl show %s | sed '1d' | awk '{print $NF}' | tr \"\n\" \" \" ",bridge);
     char expectedIfList[] = "wl01 wl11 gre0 ";
@@ -1079,7 +1081,8 @@ TEST_F(BridgeUtilsTestFixture, getCurrentIfListPopenFail)
     ovsEnable = 0;
     bridgeUtilEnable = 1;
     char bridge[] = "brlan1";
-    char ifList[216] = {0};
+    /* CID :249149 Out-of-bounds access (OVERRUN) */
+    char ifList[TOTAL_IFLIST_SIZE] = {0};
 
     char expectedCmd[128] = {0} ;
     snprintf(expectedCmd,sizeof(expectedCmd),"brctl show %s | sed '1d' | awk '{print $NF}' | tr \"\n\" \" \" ",bridge);
@@ -1099,7 +1102,8 @@ TEST_F(BridgeUtilsTestFixture, getCurrentIfListFail)
     ovsEnable = 0;
     bridgeUtilEnable = 0;
     char bridge[] = "brlan1";
-    char ifList[216] = {0};
+    /* CID :249145 Out-of-bounds access (OVERRUN) */
+    char ifList[TOTAL_IFLIST_SIZE] = {0};
     char expectedIfList[216] = {0};
     memset(expectedIfList, 0, sizeof(expectedIfList));
     getCurrentIfList(bridge, ifList);
@@ -1554,7 +1558,8 @@ TEST_F(BridgeUtilsTestFixture, AddOrDeletePortBridgeUtilsDelete)
 
 TEST_F(BridgeUtilsTestFixture, AddOrDeletePortFail)
 {
-    char bridgeName[] = "";
+    /* CID :249134 Destination buffer too small (STRING_OVERFLOW) */
+    char bridgeName[9] = "";
     char iface[] = "ath0";
     AddOrDeletePort(bridgeName, iface, OVS_BR_REMOVE_CMD);
     strcpy(bridgeName, "brlan123");

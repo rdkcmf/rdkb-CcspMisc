@@ -2154,8 +2154,8 @@ int SyncBrInterfaces()
 		bridge_util_log("%s : Memory allocation failed to allocate for bridgeDetails, exiting\n",__FUNCTION__);
 		return -1;
 	}
-
-	char current_if_list[512] = {0} ;
+        /* CID :161059 Out-of-bounds access (OVERRUN) */
+	char current_if_list[TOTAL_IFLIST_SIZE] = {0} ;
 	memset(bridgeInfo, 0, sizeof(bridgeDetails));
 	getIfList(bridgeInfo);
 	

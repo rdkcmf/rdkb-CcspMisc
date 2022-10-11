@@ -31,8 +31,12 @@
 
 rbusHandle_t handle;
 
-static char argComponentName[64] = {0};
-static char argEventName[256] = {0};
+/* CID :258957 Unbounded source buffer (STRING_SIZE) */
+#define COMP_LENGTH 64
+#define EVENT_LENGTH 256
+
+static char argComponentName[COMP_LENGTH] = {0};
+static char argEventName[EVENT_LENGTH] = {0};
 
 static void eventReceiveHandler(
 		rbusHandle_t handle,
@@ -128,8 +132,8 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	strcpy(argComponentName, argv[1]);
-	strcpy(argEventName, argv[2]);
+        snprintf(argComponentName,COMP_LENGTH,argv[1]);
+        snprintf(argEventName,EVENT_LENGTH, argv[2]);
 
 	int rc = RBUS_ERROR_SUCCESS;
 	
