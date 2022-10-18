@@ -141,7 +141,8 @@ br_shm_mutex br_shm_mutex_init(char *mutexName) {
 	errno = 0;
 	br_shm_mutex bridgeMutex;
 	memset(&bridgeMutex,0,sizeof bridgeMutex);
-	strncpy(bridgeMutex.br_mutex, mutexName,sizeof(bridgeMutex.br_mutex));	
+	/* CID :175705 Buffer not null terminated (BUFFER_SIZE) */
+	strncpy(bridgeMutex.br_mutex, mutexName,sizeof(bridgeMutex.br_mutex)-1);	
 	bridgeMutex.br_shm_fd= shm_open(mutexName, O_RDWR, 0660);
 	if (errno == ENOENT) 
 	{

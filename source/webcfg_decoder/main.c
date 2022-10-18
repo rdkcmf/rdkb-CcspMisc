@@ -312,6 +312,8 @@ static int readBinFromFile(const char *filename, char **data, size_t *len)
             fclose(fp);
             return 0;
         }
+        /* CID :162754 String not null terminated (STRING_NULL) */
+        (*data)[ch_count] ='\0';
         *len = (size_t)ch_count;
         fclose(fp);
         return 1;
@@ -364,14 +366,16 @@ int getauthtokenfromfile(const char * authfile, char **data)
 	//printf("The char_count is %d\n", char_count);
 	*data = (char *) malloc(sizeof(char) * (char_count + 1));
 	size = fread(*data, 1, char_count,file);
+        /* CID :280262 String not null terminated (STRING_NULL) */
+	(*data)[size] ='\0';
 	if (!size)
 	{
 		fclose(file);
 		printf("fread failed.\n");
 		free(*data);
+                *data = NULL;
 		return 0;
 	}
-	(*data)[char_count] ='\n';
 	fclose(file);
 	return 1;
 

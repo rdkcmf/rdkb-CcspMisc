@@ -215,7 +215,9 @@ static int check_proc_entry_for_pid (char * name, char * args)
     FILE *fp;
     struct dirent *dent;
     bool found=false;
-    int pid, rc, p, i;
+    int rc, p, i;
+    /* CID :192528 Out-of-bounds read (OVERRUN) */
+    int64_t pid;
     int rval = 0;
     char processName[BUFLEN_256];
     char cmdline[512] = {0};
@@ -231,9 +233,9 @@ static int check_proc_entry_for_pid (char * name, char * args)
     while (!found && (dent = readdir(dir)) != NULL)
     {
         if ((dent->d_type == DT_DIR) &&
-                (SUCCESS == strtol64(dent->d_name, NULL, 10, (int64_t*)&pid)))
+                (SUCCESS == strtol64(dent->d_name, NULL, 10, &pid)))
         {
-            snprintf(filename, sizeof(filename), "/proc/%d/stat", pid);
+            snprintf(filename, sizeof(filename), "/proc/%lld/stat", pid);
             fp = fopen(filename, "r");
             if (fp == NULL)
             {
@@ -260,8 +262,8 @@ static int check_proc_entry_for_pid (char * name, char * args)
                     if (args != NULL)
                     {
                         // argument to be verified before returning pid
-                        DBG_PRINT("%s %d: %s running in pid %d.. checking for cmdline param %s\n", __FUNCTION__, __LINE__, name, pid, args);
-                        snprintf(filename, sizeof(filename), "/proc/%d/cmdline", pid);
+                        DBG_PRINT("%s %d: %s running in pid %lld.. checking for cmdline param %s\n", __FUNCTION__, __LINE__, name, pid, args);
+                        snprintf(filename, sizeof(filename), "/proc/%lld/cmdline", pid);
                         fp = fopen(filename, "r");
                         if (fp == NULL)
                         {
@@ -271,8 +273,11 @@ static int check_proc_entry_for_pid (char * name, char * args)
                         DBG_PRINT("%s %d: opening file %s\n", __FUNCTION__, __LINE__, filename);
 
                         memset (cmdline, 0, sizeof(cmdline));
-                        if (fread(cmdline, 1, sizeof(cmdline), fp) > 0)
+			/* CID :258113 String not null terminated (STRING_NULL)*/
+                        int num_read ;
+                        if ((num_read = fread(cmdline, 1, sizeof(cmdline)-1 , fp)) > 0)
                         {
+		            cmdline[num_read] = '\0';
                             DBG_PRINT("%s %d: comparing cmdline from proc:%s with %s\n", __FUNCTION__, __LINE__, cmdline, args);
                             if (find_strstr(cmdline, sizeof(cmdline), args, strlen(args)) == SUCCESS)
                             {
