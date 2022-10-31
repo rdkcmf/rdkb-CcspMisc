@@ -217,9 +217,18 @@ static int udhcpc_get_other_args (char * buff, dhcp_params * params)
  */
 pid_t start_udhcpc (dhcp_params * params, dhcp_opt_list * req_opt_list, dhcp_opt_list * send_opt_list)
 {
-    if (params == NULL)
+    if ((params == NULL) || (params->ifname == NULL))
     {
         DBG_PRINT("%s %d: Invalid args..\n", __FUNCTION__, __LINE__);
+        return FAILURE;
+    }
+
+    pid_t pid = 0;
+    pid = get_process_pid(UDHCPC_CLIENT, params->ifname);
+
+    if (pid > 0)
+    {
+        DBG_PRINT("%s %d: another instance of %s runing on %s\n", __FUNCTION__, __LINE__, UDHCPC_CLIENT, params->ifname);
         return FAILURE;
     }
 

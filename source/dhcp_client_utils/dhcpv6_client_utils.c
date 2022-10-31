@@ -101,14 +101,20 @@ pid_t start_dhcpv6_client (dhcp_params * params)
         return 0;
     }
 
+    pid_t pid = 0;
+    pid = get_process_pid(DIBBLER_CLIENT, params->ifname);
+    if (pid > 0)
+    {
+        DBG_PRINT("%s %d: another instance of %s running on %s \n", __FUNCTION__, __LINE__, DIBBLER_CLIENT, params->ifname);
+        return FAILURE;
+    }
+
 
     dhcp_sysevent_fd =  sysevent_open(LOCALHOST, SE_SERVER_WELL_KNOWN_PORT, SE_VERSION, sysevent_name, &dhcp_sysevent_token);
     if (dhcp_sysevent_fd < 0)
     {
         DBG_PRINT("%s %d: Fail to open sysevent.\n", __FUNCTION__, __LINE__);
     }
-
-    pid_t pid = 0;
 
     // init part
     dhcp_opt_list * req_opt_list = NULL;
