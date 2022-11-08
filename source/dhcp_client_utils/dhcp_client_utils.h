@@ -73,6 +73,7 @@ typedef enum {
 typedef struct dhcp_opt {
     char * ifname;
     IfaceType ifType;
+    unsigned char is_release_required;
 } dhcp_params;
 
 pid_t start_dhcpv4_client (dhcp_params * params);
