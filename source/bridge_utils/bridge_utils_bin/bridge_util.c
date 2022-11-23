@@ -2550,6 +2550,7 @@ void getSettings()
     	if ( ( DeviceMode != 0 ) && ( InstanceNumber == PRIVATE_LAN ) )
     	{
     		skipWiFi = 1 ;
+    		skipMoCA = 1 ;
     	}
 
     	if ( ( MocaIsolation_Enabled ==  1 ) && ( InstanceNumber == PRIVATE_LAN ) )
