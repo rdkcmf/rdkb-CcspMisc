@@ -1354,7 +1354,7 @@ int updateBridgeInfo(bridgeDetails *bridgeInfo, char* ifNameToBeUpdated, int Opr
 			
 			#ifdef RDK_ONEWIFI
             		// OVSAgent considers WiFi interfaces as OVS_OTHER_IF_TYPE 
-       			if ( OVS_OTHER_IF_TYPE == if_type && INTERFACE_NOT_EXIST == checkIfExists(token))
+       			if ( OVS_IF_UP_CMD == Opr && IF_WIFI_BRIDGEUTIL == type && INTERFACE_NOT_EXIST == checkIfExists(token))
        			{
        				interfaceExist=false;
        				if(bridgeCreated)
