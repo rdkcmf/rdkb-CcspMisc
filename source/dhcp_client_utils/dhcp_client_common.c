@@ -235,7 +235,7 @@ static int check_proc_entry_for_pid (char * name, char * args)
         if ((dent->d_type == DT_DIR) &&
                 (SUCCESS == strtol64(dent->d_name, NULL, 10, &pid)))
         {
-            snprintf(filename, sizeof(filename), "/proc/%lld/stat", pid);
+            snprintf(filename, sizeof(filename), "/proc/%lld/stat", (long long int) pid);
             fp = fopen(filename, "r");
             if (fp == NULL)
             {
@@ -262,8 +262,8 @@ static int check_proc_entry_for_pid (char * name, char * args)
                     if (args != NULL)
                     {
                         // argument to be verified before returning pid
-                        DBG_PRINT("%s %d: %s running in pid %lld.. checking for cmdline param %s\n", __FUNCTION__, __LINE__, name, pid, args);
-                        snprintf(filename, sizeof(filename), "/proc/%lld/cmdline", pid);
+                        DBG_PRINT("%s %d: %s running in pid %lld.. checking for cmdline param %s\n", __FUNCTION__, __LINE__, name, (long long int) pid, args);
+                        snprintf(filename, sizeof(filename), "/proc/%lld/cmdline", (long long int) pid);
                         fp = fopen(filename, "r");
                         if (fp == NULL)
                         {
