@@ -96,8 +96,10 @@ if [ "xcompleted" != "x`syscfg get psm_migration`" ];then
 			psmcli set dmsb.l2net.1.Members.Eth "llan0 lbr0"
 		else
 			psmcli set dmsb.l2net.1.Members.Eth "lbr0 "
+			psmcli set dmsb.l2net.1.Port.7.Enable "FALSE"
 		fi
 		psmcli set dmsb.l2net.1.Port.7.LinkName "llan0"
+		psmcli set dmsb.l2net.1.Port.7.Name "llan0"
 		psmcli set dmsb.l2net.2.Members.Moca ""
 		psmcli set dmsb.l2net.3.Members.Moca ""
 		psmcli set dmsb.l2net.4.Members.Moca ""
@@ -120,11 +122,13 @@ if [ "xcompleted" != "x`syscfg get psm_migration`" ];then
 			psmcli set dmsb.l2net.1.Members.Eth "llan0 lbr0 nrgmii2 nsgmii0"
 		else
 			psmcli set dmsb.l2net.1.Members.Eth "lbr0 nrgmii2 nsgmii0"
+			psmcli set dmsb.l2net.1.Port.9.Enable "FALSE"
 		fi
  		psmcli set dmsb.l2net.2.Members.Moca ""
 		psmcli set dmsb.l2net.3.Members.Moca ""
 		psmcli set dmsb.l2net.4.Members.Moca ""
 		psmcli set dmsb.l2net.1.Port.9.LinkName "llan0"
+		psmcli set dmsb.l2net.1.Port.9.Name "llan0"
 		psmcli set dmsb.l2net.2.Members.WiFi "wlan0.1"
 		psmcli set dmsb.l2net.3.Members.Gre ""
 		psmcli set dmsb.l2net.5.Members.WiFi ""
@@ -159,4 +163,14 @@ if [ "$migrationCompleteFlag" -eq 0 ];then
 	fi
 fi
 
+	if [ "$MODEL_NUM" = "TG3482G" ] || [ "$MODEL_NUM" = "TG4482A" ] ;then
+		if [ ! -f "/nvram/.updatepsm_port_routermode" ];then
+			LLAN_PORT=$(psmcli get dmsb.MultiLAN.PrimaryLAN_brport)
+			if [ "$BRIDGE_MODE" -eq 0 ];then
+				psmcli set dmsb.l2net.1.Port."$LLAN_PORT".Enable "FALSE"
+				psmcli set dmsb.l2net.1.Port."$LLAN_PORT".Name "llan0"
+			fi
+			touch /nvram/.updatepsm_port_routermode
+		fi
+	fi
 exit 0
